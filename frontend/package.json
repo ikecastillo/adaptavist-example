@@ -4,6 +4,9 @@
   "private": true,
   "dependencies": {
     "@atlaskit/select": "^16.5.7",
+    "@atlaskit/dynamic-table": "^14.8.6",
+    "@atlaskit/lozenge": "^11.4.9",
+    "@atlaskit/spinner": "^16.0.5",
     "@babel/core": "^7.22.8",
     "@babel/plugin-proposal-object-rest-spread": "^7.20.7",
     "@babel/preset-env": "^7.22.7",

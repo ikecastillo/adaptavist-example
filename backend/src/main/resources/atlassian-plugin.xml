@@ -18,4 +18,25 @@
     <resource name="edit" type="velocity" location="/templates/select-edit.vm"/>
   </customfield-type>
 
+  <!-- WMPR Requests REST API -->
+  <rest name="WMPR Requests REST" key="wmpr-requests-rest" path="/wmpr-requests" version="1.0">
+    <description>REST API for WMPR requests data</description>
+  </rest>
+
+  <!-- Web Resource for the Portal Footer -->
+  <web-resource key="wmpr-portal-footer-resources" name="WMPR Portal Footer Resources">
+    <description>Resources for WMPR portal footer component</description>
+    <resource type="download" name="bundled.wmprPortalFooter.js" location="/frontend/bundled.wmprPortalFooter.js"/>
+    <resource type="download" name="wmpr-portal-footer.css" location="/css/wmpr-portal-footer.css"/>
+    <dependency>com.atlassian.auiplugin:ajs</dependency>
+    <dependency>com.atlassian.plugins.jquery:jquery</dependency>
+    <context>servicedesk.portal</context>
+  </web-resource>
+
+  <!-- Service Desk Portal Footer Module -->
+  <web-panel key="wmpr-portal-footer" name="WMPR Requests Table" location="servicedesk.portal.footer" weight="10">
+    <description>Displays recent WMPR requests in the portal footer</description>
+    <resource name="view" type="static" location="/templates/wmpr-portal-footer.vm"/>
+  </web-panel>
+
 </atlassian-plugin>

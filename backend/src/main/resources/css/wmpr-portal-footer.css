@@ -1,0 +1,115 @@
+/* WMPR Portal Footer Styles */
+.wmpr-portal-footer-wrapper {
+    margin: 20px 0;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+}
+
+.wmpr-portal-footer-wrapper h3 {
+    margin: 0 0 16px 0;
+    color: #172b4d;
+    font-size: 16px;
+    font-weight: 600;
+    line-height: 1.25;
+}
+
+.wmpr-portal-footer-wrapper .wmpr-table-container {
+    background: #fff;
+    border: 1px solid #dfe1e6;
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.wmpr-portal-footer-wrapper .wmpr-table-header {
+    padding: 16px;
+    background: #f4f5f7;
+    border-bottom: 1px solid #dfe1e6;
+}
+
+.wmpr-portal-footer-wrapper .wmpr-loading-container {
+    padding: 40px 20px;
+    text-align: center;
+    background: #f4f5f7;
+    border-radius: 3px;
+    margin: 10px 0;
+}
+
+.wmpr-portal-footer-wrapper .wmpr-error-container {
+    padding: 20px;
+    text-align: center;
+    background: #ffebe6;
+    border-radius: 3px;
+    margin: 10px 0;
+    border: 1px solid #ff5630;
+}
+
+.wmpr-portal-footer-wrapper .wmpr-error-text {
+    color: #bf2600;
+    margin: 0 0 10px 0;
+}
+
+.wmpr-portal-footer-wrapper .wmpr-retry-button {
+    padding: 8px 16px;
+    background: #0052CC;
+    color: white;
+    border: none;
+    border-radius: 3px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    transition: background-color 0.2s ease;
+}
+
+.wmpr-portal-footer-wrapper .wmpr-retry-button:hover {
+    background: #0043A8;
+}
+
+.wmpr-portal-footer-wrapper .wmpr-issue-link {
+    color: #0052CC;
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.wmpr-portal-footer-wrapper .wmpr-issue-link:hover {
+    text-decoration: underline;
+}
+
+.wmpr-portal-footer-wrapper .wmpr-no-data {
+    padding: 40px 20px;
+    text-align: center;
+    color: #5e6c84;
+    font-style: italic;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .wmpr-portal-footer-wrapper {
+        margin: 10px 0;
+    }
+    
+    .wmpr-portal-footer-wrapper .wmpr-table-header {
+        padding: 12px;
+    }
+    
+    .wmpr-portal-footer-wrapper h3 {
+        font-size: 14px;
+    }
+}
+
+/* Integration with Service Desk Portal styles */
+#servicedesk-portal-footer .wmpr-portal-footer-wrapper,
+.servicedesk-portal-footer .wmpr-portal-footer-wrapper,
+[data-section="servicedesk.portal.footer"] .wmpr-portal-footer-wrapper {
+    max-width: 100%;
+    box-sizing: border-box;
+}
+
+/* Ensure table is responsive within portal */
+.wmpr-portal-footer-wrapper table {
+    width: 100%;
+    table-layout: fixed;
+}
+
+.wmpr-portal-footer-wrapper td {
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+} 

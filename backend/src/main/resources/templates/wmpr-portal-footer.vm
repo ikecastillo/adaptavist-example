@@ -1,0 +1,16 @@
+## WMPR Portal Footer Template
+## This template loads the JavaScript and CSS resources for the WMPR requests table
+
+<div id="wmpr-portal-footer-section" class="wmpr-portal-footer-section">
+    <!-- The React component will be mounted here via JavaScript -->
+</div>
+
+<script type="text/javascript">
+    // Ensure the web resources are loaded
+    require(['wr!com.scriptrunnerhq.backend.vendor-api-example:wmpr-portal-footer-resources'], function() {
+        console.log('WMPR Portal Footer resources loaded');
+        
+        // The component initialization is handled by the bundled JavaScript file
+        // which listens for DOMContentLoaded and initializes the React component
+    });
+</script> 

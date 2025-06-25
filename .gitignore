@@ -3,3 +3,18 @@ frontend/node
 target/
 backend/src/main/resources/META-INF/plugin-descriptors/
 backend/src/main/resources/frontend/
+
+# Additional patterns
+*.log
+.DS_Store
+.idea/
+*.iml
+*.iws
+*.ipr
+.vscode/
+.settings/
+.project
+.classpath
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*

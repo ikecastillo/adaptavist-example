@@ -10,6 +10,9 @@ module.exports = (_, { mode }) => {
 
     return {
         watch,
+        resolve: {
+            extensions: ['.tsx', '.ts', '.js', '.jsx']
+        },
         module: {
             rules: [{
                 test: /\.tsx?$/,
@@ -19,7 +22,8 @@ module.exports = (_, { mode }) => {
         },
         entry: {
             'vendorApiExample': './src/vendors-api-example.tsx',
-            'vendorApiSelectExample': './src/vendors-api-select-example.tsx'
+            'vendorApiSelectExample': './src/vendors-api-select-example.tsx',
+            'wmprPortalFooter': './src/wmpr-portal-footer-integration.tsx'
         },
         plugins: [
             new WrmPlugin({
@@ -29,7 +33,8 @@ module.exports = (_, { mode }) => {
                 xmlDescriptors: xmlOutPath,
                 contextMap: {
                     'vendorApiExample': 'jira.general',
-                    'vendorApiSelectExample': 'jira.general'
+                    'vendorApiSelectExample': 'jira.general',
+                    'wmprPortalFooter': 'servicedesk.portal'
                 }
             }),
         ],

@@ -14,16 +14,23 @@ module.exports = (_, { mode }) => {
             extensions: ['.tsx', '.ts', '.js', '.jsx']
         },
         module: {
-            rules: [{
-                test: /\.tsx?$/,
-                exclude: /node_modules/,
-                use: { loader: "babel-loader" }
-            }]
+            rules: [
+                {
+                    test: /\.tsx?$/,
+                    exclude: /node_modules/,
+                    use: { loader: "babel-loader" }
+                },
+                {
+                    test: /\.css$/,
+                    use: ['style-loader', 'css-loader']
+                }
+            ]
         },
         entry: {
             'vendorApiExample': './src/vendors-api-example.tsx',
             'vendorApiSelectExample': './src/vendors-api-select-example.tsx',
-            'wmprPortalFooter': './src/wmpr-portal-footer-integration.tsx'
+            'wmprPortalFooter': './src/wmpr-portal-footer-integration.tsx',
+            'wmprSettings': './src/wmpr-settings-integration.tsx'
         },
         plugins: [
             new WrmPlugin({
@@ -34,7 +41,8 @@ module.exports = (_, { mode }) => {
                 contextMap: {
                     'vendorApiExample': 'jira.general',
                     'vendorApiSelectExample': 'jira.general',
-                    'wmprPortalFooter': 'servicedesk.portal'
+                    'wmprPortalFooter': 'servicedesk.portal',
+                    'wmprSettings': 'jira.admin'
                 }
             }),
         ],

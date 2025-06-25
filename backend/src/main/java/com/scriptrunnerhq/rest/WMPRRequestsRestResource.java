@@ -8,8 +8,8 @@ import com.atlassian.jira.user.ApplicationUser;
 import com.atlassian.jira.web.bean.PagerFilter;
 import com.atlassian.plugin.spring.scanner.annotation.imports.ComponentImport;
 import com.atlassian.plugin.spring.scanner.annotation.imports.JiraImport;
-// import com.atlassian.sal.api.pluginsettings.PluginSettings;
-// import com.atlassian.sal.api.pluginsettings.PluginSettingsFactory;
+import com.atlassian.sal.api.pluginsettings.PluginSettings;
+import com.atlassian.sal.api.pluginsettings.PluginSettingsFactory;
 import com.scriptrunnerhq.model.ServiceDeskRequest;
 import com.google.gson.Gson;
 
@@ -27,7 +27,7 @@ import java.util.*;
 public class WMPRRequestsRestResource {
 
     private static final String DEFAULT_JQL = "project = WMPR ORDER BY created DESC";
-    // private static final String SETTINGS_KEY_PREFIX = "wmpr.settings.";
+    private static final String SETTINGS_KEY_PREFIX = "wmpr.settings.";
 
     @JiraImport
     private final SearchService searchService;
@@ -35,20 +35,19 @@ public class WMPRRequestsRestResource {
     @JiraImport
     private final JiraAuthenticationContext authenticationContext;
     
-    // @ComponentImport
-    // private final PluginSettingsFactory pluginSettingsFactory;
+    @ComponentImport
+    private final PluginSettingsFactory pluginSettingsFactory;
     
     private final Gson gson;
 
     @Inject
     public WMPRRequestsRestResource(
             SearchService searchService,
-            JiraAuthenticationContext authenticationContext
-            // PluginSettingsFactory pluginSettingsFactory
-            ) {
+            JiraAuthenticationContext authenticationContext,
+            PluginSettingsFactory pluginSettingsFactory) {
         this.searchService = searchService;
         this.authenticationContext = authenticationContext;
-        // this.pluginSettingsFactory = pluginSettingsFactory;
+        this.pluginSettingsFactory = pluginSettingsFactory;
         this.gson = new Gson();
     }
 
@@ -73,7 +72,7 @@ public class WMPRRequestsRestResource {
                 return createOptimizedResponse(errorResponse, Response.Status.UNAUTHORIZED);
             }
 
-            // Get configured JQL from plugin settings - COMMENTED OUT FOR MVP
+            // Get configured JQL from plugin settings
             String jql = getConfiguredJql(projectKey);
             System.out.println("[" + requestId + "] Using JQL: " + jql);
             
@@ -148,18 +147,12 @@ public class WMPRRequestsRestResource {
     
     /**
      * Gets the configured JQL for the specified project, or returns default if not configured
-     * COMMENTED OUT FOR MVP - Using fixed JQL
      */
     private String getConfiguredJql(String projectKey) {
-        // MVP: Use fixed JQL instead of dynamic settings
-        return DEFAULT_JQL;
-        
-        /* COMMENTED OUT FOR MVP
         try {
-            // If no project key provided, use default JQL which works across projects
+            // If no project key provided, use global settings or default JQL
             if (projectKey == null || projectKey.trim().isEmpty()) {
-                System.out.println("No project key provided, using default JQL");
-                return DEFAULT_JQL;
+                projectKey = "global";
             }
             
             PluginSettings settings = pluginSettingsFactory.createGlobalSettings();
@@ -185,7 +178,6 @@ public class WMPRRequestsRestResource {
             System.err.println("Error loading JQL settings for project " + projectKey + ": " + e.getMessage());
             return DEFAULT_JQL;
         }
-        */
     }
     
     /**
@@ -229,7 +221,7 @@ public class WMPRRequestsRestResource {
         diagnostics.put("user", user.getName());
         diagnostics.put("jql", jql);
         diagnostics.put("resultCount", resultCount);
-        diagnostics.put("version", "1.0.0-optimized");
+        diagnostics.put("version", "1.0.0-dynamic");
         return diagnostics;
     }
 } 

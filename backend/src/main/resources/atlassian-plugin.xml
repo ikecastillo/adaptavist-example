@@ -20,8 +20,14 @@
 
   <!-- WMPR Requests REST API -->
   <rest name="WMPR Requests REST" key="wmpr-requests-rest" path="/wmpr-requests" version="1.0">
-    <description>REST API for WMPR requests data</description>
+    <description>REST API for WMPR requests data and settings</description>
   </rest>
+
+  <!-- WMPR Settings Servlet -->
+  <servlet name="WMPR Settings Servlet" key="wmpr-settings-servlet" class="com.scriptrunnerhq.servlet.WMPRSettingsServlet">
+    <description>Settings page for WMPR requests configuration</description>
+    <url-pattern>/wmpr-settings</url-pattern>
+  </servlet>
 
   <!-- Web Resource for the Portal Footer -->
   <web-resource key="wmpr-portal-footer-resources" name="WMPR Portal Footer Resources">
@@ -33,10 +39,29 @@
     <context>servicedesk.portal</context>
   </web-resource>
 
+  <!-- Web Resource for Settings Page -->
+  <web-resource key="wmpr-settings-resources" name="WMPR Settings Resources">
+    <description>Resources for WMPR settings page</description>
+    <resource type="download" name="bundled.wmprSettings.js" location="/frontend/bundled.wmprSettings.js"/>
+    <dependency>com.atlassian.auiplugin:ajs</dependency>
+    <dependency>com.atlassian.plugins.jquery:jquery</dependency>
+    <context>jira.admin</context>
+  </web-resource>
+
   <!-- Service Desk Portal Footer Module -->
   <web-panel key="wmpr-portal-footer" name="WMPR Requests Table" location="servicedesk.portal.footer" weight="10">
     <description>Displays recent WMPR requests in the portal footer</description>
     <resource name="view" type="static" location="/templates/wmpr-portal-footer.vm"/>
   </web-panel>
+
+  <!-- Admin Menu Item -->
+  <web-item key="wmpr-settings-menu" name="WMPR Settings" section="admin_plugins_menu/user_interface" weight="50">
+    <description>WMPR Requests Configuration</description>
+    <label key="wmpr.settings.menu.label">WMPR Requests</label>
+    <link linkId="wmpr-settings-link">/plugins/servlet/wmpr-settings</link>
+    <condition class="com.atlassian.jira.plugin.webfragment.conditions.JiraGlobalPermissionCondition">
+      <param name="permission">admin</param>
+    </condition>
+  </web-item>
 
 </atlassian-plugin>

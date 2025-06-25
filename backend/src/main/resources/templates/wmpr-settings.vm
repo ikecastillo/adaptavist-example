@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>WMPR Requests Settings</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+            background-color: #f4f5f7;
+            margin: 0;
+            padding: 20px;
+        }
+        
+        .settings-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 3px;
+            box-shadow: 0 1px 2px rgba(9, 30, 66, 0.25);
+            min-height: 500px;
+        }
+        
+        .loading-state {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 300px;
+            color: #5e6c84;
+        }
+        
+        /* Basic Atlaskit-like styles for fallback */
+        .wmpr-form {
+            padding: 24px;
+        }
+        
+        .wmpr-field {
+            margin-bottom: 16px;
+        }
+        
+        .wmpr-label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #172b4d;
+        }
+        
+        .wmpr-input {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #dfe1e6;
+            border-radius: 3px;
+            font-size: 14px;
+        }
+        
+        .wmpr-button {
+            background: #0052cc;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-right: 8px;
+        }
+        
+        .wmpr-button:hover {
+            background: #0043a8;
+        }
+    </style>
+</head>
+<body>
+    <div class="settings-container">
+        <div id="wmpr-settings-container">
+            <!-- Fallback content while React loads -->
+            <div class="loading-state">
+                <div>
+                    <div style="text-align: center;">
+                        <div style="width: 40px; height: 40px; border: 4px solid #f3f3f3; border-top: 4px solid #0052cc; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 16px;"></div>
+                        <p>Loading WMPR Settings...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <style>
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+
+    <!-- Load required web resources -->
+    <script>
+        // Ensure AJS is available for context path
+        if (typeof AJS === 'undefined') {
+            window.AJS = { contextPath: function() { return '$baseUrl'; } };
+        }
+    </script>
+
+    <!-- Load the bundled JavaScript -->
+    <script src="$baseUrl/download/resources/com.scriptrunnerhq.backend.vendor-api-example:wmpr-settings-resources/bundled.wmprSettings.js"></script>
+</body>
+</html> 

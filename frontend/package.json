@@ -3,10 +3,17 @@
   "version": "0.1.0",
   "private": true,
   "dependencies": {
-    "@atlaskit/select": "^16.5.7",
+    "@atlaskit/banner": "^12.2.2",
+    "@atlaskit/button": "^16.17.4",
+    "@atlaskit/checkbox": "^13.0.6",
     "@atlaskit/dynamic-table": "^14.8.6",
+    "@atlaskit/flag": "^15.2.3",
+    "@atlaskit/form": "^10.0.2",
     "@atlaskit/lozenge": "^11.4.9",
+    "@atlaskit/section-message": "^6.3.5",
+    "@atlaskit/select": "^16.5.7",
     "@atlaskit/spinner": "^16.0.5",
+    "@atlaskit/textfield": "^6.0.6",
     "@babel/core": "^7.22.8",
     "@babel/plugin-proposal-object-rest-spread": "^7.20.7",
     "@babel/preset-env": "^7.22.7",
@@ -52,5 +59,9 @@
       "last 1 firefox version",
       "last 1 safari version"
     ]
+  },
+  "devDependencies": {
+    "css-loader": "^7.1.2",
+    "style-loader": "^4.0.0"
   }
 }

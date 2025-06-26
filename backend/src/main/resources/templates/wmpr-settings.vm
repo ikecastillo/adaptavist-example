@@ -1,125 +1,112 @@
-#set($decorator = "admin")
-#set($webResourceManager = $action.webResourceManager)
-$webResourceManager.requireResource("com.scriptrunnerhq.vendors-api.backend:wmpr-settings-resources")
-$webResourceManager.requireResource("com.atlassian.auiplugin:ajs")
-$webResourceManager.requireResource("com.atlassian.plugins.jquery:jquery")
-
-<div class="project-config-webpanel-container">
-    <div class="project-config-header">
-        <h2>WMPR Requests Settings</h2>
-        <p class="project-config-description">Configure the JQL query used to fetch WMPR requests for display in the Service Desk portal.</p>
-    </div>
+<!DOCTYPE html>
+<html>
+<head>
+    <title>WMPR Requests Settings</title>
+    <meta name="decorator" content="atl.admin">
+    <meta name="admin.active.section" content="atl.jira.proj.config">
+    <meta name="admin.active.tab" content="wmpr-settings-menu">
+    <meta charset="utf-8">
     
-    <div id="wmpr-settings-container" class="project-config-content">
-        <!-- Loading state while React component initializes -->
-        <div class="wmpr-loading-placeholder aui-page-panel">
-            <div class="aui-page-panel-inner">
-                <div class="aui-page-panel-content">
-                    <div style="text-align: center; padding: 40px;">
-                        <div class="aui-icon aui-icon-wait" style="font-size: 32px; margin-bottom: 16px;">Loading...</div>
-                        <p>Initializing WMPR Settings...</p>
+    #set($webResourceManager = $action.webResourceManager)
+    $webResourceManager.requireResource("com.scriptrunnerhq.vendors-api.backend:wmpr-settings-resources")
+    $webResourceManager.requireResource("com.atlassian.auiplugin:ajs")
+    $webResourceManager.requireResource("com.atlassian.plugins.jquery:jquery")
+</head>
+<body>
+    <div class="aui-page-panel">
+        <div class="aui-page-panel-inner">
+            <div class="aui-page-panel-nav">
+                <!-- This will be populated by Jira's admin decorator -->
+            </div>
+            
+            <div class="aui-page-panel-content">
+                <header class="aui-page-header">
+                    <div class="aui-page-header-inner">
+                        <div class="aui-page-header-main">
+                            <h1>WMPR Requests Settings</h1>
+                            <p class="aui-page-header-description">
+                                Configure the JQL query used to fetch WMPR requests for display in the Service Desk portal.
+                            </p>
+                        </div>
+                    </div>
+                </header>
+                
+                <div class="aui-page-panel-content-body">
+                    <div id="wmpr-settings-container" class="project-config-content">
+                        <!-- Loading state while React component initializes -->
+                        <div class="wmpr-loading-placeholder">
+                            <div class="aui-page-panel">
+                                <div class="aui-page-panel-inner">
+                                    <div class="aui-page-panel-content">
+                                        <div style="text-align: center; padding: 40px;">
+                                            <aui-spinner size="medium"></aui-spinner>
+                                            <p>Initializing WMPR Settings...</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
-</div>
 
-<style>
-    .project-config-webpanel-container {
-        background: #fff;
-        margin: 0;
-        padding: 0;
-    }
-    
-    .project-config-header {
-        border-bottom: 1px solid #ddd;
-        padding: 20px;
-        background: #f5f5f5;
-    }
-    
-    .project-config-header h2 {
-        margin: 0 0 8px 0;
-        color: #333;
-        font-size: 20px;
-        font-weight: normal;
-    }
-    
-    .project-config-description {
-        margin: 0;
-        color: #707070;
-        font-size: 14px;
-    }
-    
-    .project-config-content {
-        min-height: 400px;
-    }
-    
-    /* Ensure React component styling integrates well */
-    #wmpr-settings-container .aui-page-panel {
-        border: none;
-        margin: 0;
-    }
-    
-    @keyframes spin {
-        0% { transform: rotate(0deg); }
-        100% { transform: rotate(360deg); }
-    }
-</style>
-
-<script type="text/javascript">
-    (function() {
-        // Set up proper context path for project admin
-        var contextPath = '$req.contextPath';
-        var projectKey = '$projectKey';
-        
-        // Set global context
-        window.contextPath = contextPath || '';
-        window.projectKey = projectKey || '';
-        
-        // Ensure AJS is available
-        if (typeof AJS === 'undefined') {
-            window.AJS = { 
-                contextPath: function() { 
-                    return window.contextPath; 
-                } 
-            };
-        }
-        
-        console.log('WMPR Settings loaded for project:', window.projectKey);
-        console.log('Context path:', window.contextPath);
-        
-        // Initialize WMPR Settings component
-        function initializeWMPRSettings() {
-            console.log('Initializing WMPR Settings in project admin context...');
+    <script type="text/javascript">
+        (function() {
+            // Set up proper context path for project admin
+            var contextPath = '$req.contextPath';
+            var projectKey = '$projectKey';
             
-            var container = document.getElementById('wmpr-settings-container');
-            if (!container) {
-                console.log('Settings container not found, retrying...');
-                setTimeout(initializeWMPRSettings, 1000);
-                return;
+            // Set global context
+            window.contextPath = contextPath || '';
+            window.projectKey = projectKey || '';
+            
+            // Ensure AJS is available
+            if (typeof AJS === 'undefined') {
+                window.AJS = { 
+                    contextPath: function() { 
+                        return window.contextPath; 
+                    } 
+                };
             }
             
-            if (typeof window.WMPRSettings !== 'undefined' && window.WMPRSettings.mount) {
-                console.log('Mounting WMPR Settings component');
-                window.WMPRSettings.mount();
+            console.log('WMPR Settings loaded for project:', window.projectKey);
+            console.log('Context path:', window.contextPath);
+            
+            // Initialize WMPR Settings component
+            function initializeWMPRSettings() {
+                console.log('Initializing WMPR Settings in project admin context...');
+                
+                var container = document.getElementById('wmpr-settings-container');
+                if (!container) {
+                    console.log('Settings container not found, retrying...');
+                    setTimeout(initializeWMPRSettings, 1000);
+                    return;
+                }
+                
+                if (typeof window.WMPRSettings !== 'undefined' && window.WMPRSettings.mount) {
+                    console.log('Mounting WMPR Settings component');
+                    window.WMPRSettings.mount();
+                } else {
+                    console.log('WMPRSettings not ready, retrying...');
+                    setTimeout(initializeWMPRSettings, 1000);
+                }
+            }
+            
+            // Initialize when ready
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', initializeWMPRSettings);
             } else {
-                console.log('WMPRSettings not ready, retrying...');
-                setTimeout(initializeWMPRSettings, 1000);
+                setTimeout(initializeWMPRSettings, 100);
             }
-        }
-        
-        // Initialize when ready
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', initializeWMPRSettings);
-        } else {
-            setTimeout(initializeWMPRSettings, 100);
-        }
-        
-        // AJS ready
-        if (typeof AJS !== 'undefined' && AJS.toInit) {
-            AJS.toInit(initializeWMPRSettings);
-        }
-        
-    })();
-</script> 
+            
+            // AJS ready
+            if (typeof AJS !== 'undefined' && AJS.toInit) {
+                AJS.toInit(initializeWMPRSettings);
+            }
+            
+        })();
+    </script>
+</body>
+</html> 

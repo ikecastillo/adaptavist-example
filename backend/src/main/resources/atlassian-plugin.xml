@@ -36,7 +36,7 @@
     <resource type="download" name="wmpr-portal-footer.css" location="css/wmpr-portal-footer.css"/>
     <dependency>com.atlassian.auiplugin:ajs</dependency>
     <dependency>com.atlassian.plugins.jquery:jquery</dependency>
-    <context>atl.general</context>
+    <context>servicedesk.portal</context>
   </web-resource>
 
   <!-- Web Resource for Settings Page -->
@@ -49,7 +49,7 @@
   </web-resource>
 
   <!-- Service Desk Portal Footer Module -->
-  <web-panel key="wmpr-portal-footer" name="WMPR Requests Table" location="atl.general.content" weight="10">
+  <web-panel key="wmpr-portal-footer" name="WMPR Requests Table" location="servicedesk.portal.footer" weight="10">
     <description>Displays recent WMPR requests in the portal footer</description>
     <resource name="view" type="static" location="templates/wmpr-portal-footer.vm"/>
   </web-panel>

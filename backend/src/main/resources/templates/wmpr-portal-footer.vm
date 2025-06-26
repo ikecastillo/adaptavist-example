@@ -7,7 +7,7 @@ $webResourceManager.requireResource("com.atlassian.auiplugin:ajs")
 
 <div id="wmpr-portal-footer-section" class="wmpr-portal-footer-section">
     <!-- The React component will be mounted here via JavaScript -->
-    <div style="padding: 20px; text-align: center; color: #5e6c84;">
+    <div class="wmpr-loading-placeholder" style="padding: 20px; text-align: center; color: #5e6c84;">
         <div style="width: 30px; height: 30px; border: 3px solid #f3f3f3; border-top: 3px solid #0052cc; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 10px;"></div>
         <p style="margin: 0; font-size: 14px;">Loading WMPR requests...</p>
     </div>
@@ -22,6 +22,16 @@ $webResourceManager.requireResource("com.atlassian.auiplugin:ajs")
     .wmpr-portal-footer-section {
         margin: 10px 0;
         min-height: 50px;
+        border: 1px solid #dfe1e6;
+        border-radius: 3px;
+        background: #fff;
+    }
+    
+    /* Service Desk Portal specific styling */
+    .sd-portal-footer .wmpr-portal-footer-section,
+    .servicedesk-portal-footer .wmpr-portal-footer-section {
+        margin: 20px 0;
+        max-width: 100%;
     }
 </style>
 
@@ -44,16 +54,24 @@ $webResourceManager.requireResource("com.atlassian.auiplugin:ajs")
     }
     
     // Debug logging
-    console.log('WMPR Portal Footer template loaded');
+    console.log('WMPR Portal Footer template loaded in Service Desk portal');
     console.log('Context path:', window.contextPath);
     console.log('AJS context path:', (typeof AJS !== 'undefined' ? AJS.contextPath() : 'AJS not available'));
     
-    // Try to initialize the component immediately and on DOM ready
+    // Enhanced component initialization for Service Desk portal
     function initWMPRFooter() {
-        console.log('Attempting to initialize WMPR footer component');
+        console.log('Attempting to initialize WMPR footer component in Service Desk portal');
+        
+        // Check if we're in the right context
+        var footerSection = document.getElementById('wmpr-portal-footer-section');
+        if (!footerSection) {
+            console.log('WMPR footer section not found, retrying...');
+            setTimeout(initWMPRFooter, 1000);
+            return;
+        }
         
         if (typeof window.WMPRPortalFooter !== 'undefined' && window.WMPRPortalFooter.mount) {
-            console.log('Mounting WMPR Portal Footer component');
+            console.log('Mounting WMPR Portal Footer component in Service Desk portal');
             window.WMPRPortalFooter.mount();
         } else {
             console.log('WMPR Portal Footer not ready, retrying in 1 second');
@@ -73,12 +91,27 @@ $webResourceManager.requireResource("com.atlassian.auiplugin:ajs")
         AJS.toInit(initWMPRFooter);
     }
     
+    // Service Desk specific initialization
+    if (typeof window !== 'undefined') {
+        // Listen for Service Desk portal load events
+        window.addEventListener('load', function() {
+            setTimeout(initWMPRFooter, 500);
+        });
+        
+        // Also try on hash changes (SPA navigation)
+        window.addEventListener('hashchange', function() {
+            setTimeout(initWMPRFooter, 500);
+        });
+    }
+    
     // Fallback - try again after a longer delay
     setTimeout(function() {
         var footerSection = document.getElementById('wmpr-portal-footer-section');
-        if (footerSection && footerSection.querySelector('p')) {
+        if (footerSection && footerSection.querySelector('.wmpr-loading-placeholder')) {
             console.log('Portal footer component still not loaded after 5 seconds, checking resources...');
             console.log('Available global objects:', Object.keys(window).filter(k => k.includes('WMPR')));
+            console.log('Footer section found:', !!footerSection);
+            console.log('Is Service Desk portal?:', window.location.href.includes('servicedesk') || document.body.className.includes('servicedesk'));
         }
     }, 5000);
 </script> 

@@ -9,13 +9,13 @@
   <resource type="i18n" name="i18n" location="jira-react-atlaskit"/>
   <customfield-type name="SR Vendors API Example" i18n-name-key="sr-vendors-api-example.name" key="sr-vendors-api-example" class="com.scriptrunnerhq.CustomField">
     <description key="sr-vendors-api-example.description"/>
-    <resource name="view" type="velocity" location="/templates/view.vm"/>
-    <resource name="edit" type="velocity" location="/templates/edit.vm"/>
+    <resource name="view" type="velocity" location="templates/view.vm"/>
+    <resource name="edit" type="velocity" location="templates/edit.vm"/>
   </customfield-type>
   <customfield-type name="SR Vendors API Select Example" i18n-name-key="sr-vendors-api-select-example.name" key="sr-vendors-api-select-example" class="com.scriptrunnerhq.CustomField">
     <description key="sr-vendors-api-select-example.description"/>
-    <resource name="view" type="velocity" location="/templates/view.vm"/>
-    <resource name="edit" type="velocity" location="/templates/select-edit.vm"/>
+    <resource name="view" type="velocity" location="templates/view.vm"/>
+    <resource name="edit" type="velocity" location="templates/select-edit.vm"/>
   </customfield-type>
 
   <!-- WMPR Requests REST API -->
@@ -32,24 +32,26 @@
   <!-- Web Resource for the Portal Footer -->
   <web-resource key="wmpr-portal-footer-resources" name="WMPR Portal Footer Resources">
     <description>Resources for WMPR portal footer component</description>
-    <resource type="download" name="bundled.wmprPortalFooter.js" location="/frontend/bundled.wmprPortalFooter.js"/>
-    <resource type="download" name="wmpr-portal-footer.css" location="/css/wmpr-portal-footer.css"/>
+    <resource type="download" name="bundled.wmprPortalFooter.js" location="frontend/bundled.wmprPortalFooter.js"/>
+    <resource type="download" name="wmpr-portal-footer.css" location="css/wmpr-portal-footer.css"/>
     <dependency>com.atlassian.auiplugin:ajs</dependency>
     <dependency>com.atlassian.plugins.jquery:jquery</dependency>
+    <context>atl.general</context>
   </web-resource>
 
   <!-- Web Resource for Settings Page -->
   <web-resource key="wmpr-settings-resources" name="WMPR Settings Resources">
     <description>Resources for WMPR settings page</description>
-    <resource type="download" name="bundled.wmprSettings.js" location="/frontend/bundled.wmprSettings.js"/>
+    <resource type="download" name="bundled.wmprSettings.js" location="frontend/bundled.wmprSettings.js"/>
     <dependency>com.atlassian.auiplugin:ajs</dependency>
     <dependency>com.atlassian.plugins.jquery:jquery</dependency>
+    <context>jira.admin</context>
   </web-resource>
 
   <!-- Service Desk Portal Footer Module -->
   <web-panel key="wmpr-portal-footer" name="WMPR Requests Table" location="atl.general.content" weight="10">
     <description>Displays recent WMPR requests in the portal footer</description>
-    <resource name="view" type="static" location="/templates/wmpr-portal-footer.vm"/>
+    <resource name="view" type="static" location="templates/wmpr-portal-footer.vm"/>
   </web-panel>
 
   <!-- Project Admin Menu Item -->

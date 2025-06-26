@@ -26,23 +26,34 @@ $webResourceManager.requireResource("com.atlassian.auiplugin:ajs")
 </style>
 
 <script type="text/javascript">
+    // Set up proper context path
+    window.contextPath = '$req.contextPath';
+    
     // Ensure AJS is available
     if (typeof AJS === 'undefined') {
         window.AJS = { 
             contextPath: function() { 
-                return '$req.contextPath'; 
+                return window.contextPath || '$req.contextPath'; 
             } 
+        };
+    } else {
+        // Override AJS context path if needed
+        AJS.contextPath = function() {
+            return window.contextPath || '$req.contextPath';
         };
     }
     
     // Debug logging
     console.log('WMPR Portal Footer template loaded');
-    console.log('Context path:', (typeof AJS !== 'undefined' ? AJS.contextPath() : '$req.contextPath'));
+    console.log('Context path:', window.contextPath);
+    console.log('AJS context path:', (typeof AJS !== 'undefined' ? AJS.contextPath() : 'AJS not available'));
     
     // Try to initialize the component immediately and on DOM ready
     function initWMPRFooter() {
         console.log('Attempting to initialize WMPR footer component');
+        
         if (typeof window.WMPRPortalFooter !== 'undefined' && window.WMPRPortalFooter.mount) {
+            console.log('Mounting WMPR Portal Footer component');
             window.WMPRPortalFooter.mount();
         } else {
             console.log('WMPR Portal Footer not ready, retrying in 1 second');
@@ -61,4 +72,13 @@ $webResourceManager.requireResource("com.atlassian.auiplugin:ajs")
     if (typeof AJS !== 'undefined' && AJS.toInit) {
         AJS.toInit(initWMPRFooter);
     }
+    
+    // Fallback - try again after a longer delay
+    setTimeout(function() {
+        var footerSection = document.getElementById('wmpr-portal-footer-section');
+        if (footerSection && footerSection.querySelector('p')) {
+            console.log('Portal footer component still not loaded after 5 seconds, checking resources...');
+            console.log('Available global objects:', Object.keys(window).filter(k => k.includes('WMPR')));
+        }
+    }, 5000);
 </script> 

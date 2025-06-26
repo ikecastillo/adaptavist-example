@@ -34,16 +34,46 @@ const WMPRPortalFooter: React.FC = () => {
     fetchWMPRRequests();
   }, []);
 
+  const getBaseUrl = () => {
+    // Multiple methods to get the correct base URL
+    let baseUrl = (window as any).location.origin;
+    let contextPath = '';
+    
+    // Try to get context path from global variables
+    if ((window as any).contextPath) {
+      contextPath = (window as any).contextPath;
+    } else if ((window as any).AJS?.contextPath) {
+      contextPath = (window as any).AJS.contextPath();
+    } else {
+      // Extract from current URL
+      const pathname = window.location.pathname;
+      const parts = pathname.split('/');
+      if (parts.length > 1 && parts[1] && !parts[1].includes('servicedesk')) {
+        contextPath = '/' + parts[1];
+      }
+    }
+    
+    // Clean up context path
+    if (contextPath && !contextPath.startsWith('/')) {
+      contextPath = '/' + contextPath;
+    }
+    
+    const fullUrl = `${baseUrl}${contextPath}`;
+    console.log('WMPR API Base URL:', fullUrl);
+    return fullUrl;
+  };
+
   const fetchWMPRRequests = async () => {
     try {
       setLoading(true);
       setError(null);
       
-      // Get the base URL for the current Jira instance
-      const baseUrl = (window as any).location.origin;
-      const contextPath = (window as any).AJS?.contextPath() || '';
+      const baseUrl = getBaseUrl();
+      const apiUrl = `${baseUrl}/rest/wmpr-requests/1.0/recent`;
       
-      const response = await fetch(`${baseUrl}${contextPath}/rest/wmpr-requests/1.0/recent`, {
+      console.log('Fetching WMPR requests from:', apiUrl);
+      
+      const response = await fetch(apiUrl, {
         method: 'GET',
         headers: {
           'Accept': 'application/json',
@@ -53,14 +83,17 @@ const WMPRPortalFooter: React.FC = () => {
       });
 
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        const errorText = await response.text();
+        throw new Error(`HTTP ${response.status}: ${errorText || response.statusText}`);
       }
 
       const data: ApiResponse = await response.json();
       setRequests(data.data || []);
+      console.log('WMPR requests loaded:', data.data?.length || 0);
     } catch (err) {
       console.error('Error fetching WMPR requests:', err);
-      setError(err instanceof Error ? err.message : 'An unknown error occurred');
+      const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred';
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -128,7 +161,7 @@ const WMPRPortalFooter: React.FC = () => {
         key: 'key',
         content: (
           <a 
-            href={`/browse/${request.key}`} 
+            href={`${getBaseUrl()}/browse/${request.key}`} 
             target="_blank" 
             rel="noopener noreferrer"
             style={{ color: '#0052CC', textDecoration: 'none' }}
@@ -189,8 +222,11 @@ const WMPRPortalFooter: React.FC = () => {
         margin: '10px 0',
         border: '1px solid #ff5630'
       }}>
-        <p style={{ color: '#bf2600', margin: '0' }}>
+        <p style={{ color: '#bf2600', margin: '0 0 10px 0' }}>
           Error loading WMPR requests: {error}
+        </p>
+        <p style={{ color: '#5e6c84', fontSize: '12px', margin: '0 0 10px 0' }}>
+          API URL: {getBaseUrl()}/rest/wmpr-requests/1.0/recent
         </p>
         <button 
           onClick={fetchWMPRRequests}

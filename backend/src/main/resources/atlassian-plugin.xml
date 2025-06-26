@@ -51,7 +51,7 @@
   <!-- Service Desk Portal Footer Module -->
   <web-panel key="wmpr-portal-footer" name="WMPR Requests Table" location="servicedesk.portal.footer" weight="10">
     <description>Displays recent WMPR requests in the portal footer</description>
-    <resource name="view" type="static" location="templates/wmpr-portal-footer.vm"/>
+    <resource name="view" type="velocity" location="templates/wmpr-portal-footer.vm"/>
   </web-panel>
 
   <!-- Project Admin Menu Item -->

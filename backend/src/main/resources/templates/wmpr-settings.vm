@@ -4,6 +4,11 @@
     <title>WMPR Requests Settings</title>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    
+    ## Load the web resources explicitly
+    $webResourceManager.requireResource("com.scriptrunnerhq.vendors-api.backend:wmpr-settings-resources")
+    $webResourceManager.requireResource("com.atlassian.auiplugin:ajs")
+    
     <style>
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
@@ -91,15 +96,21 @@
         }
     </style>
 
-    <!-- Load required web resources -->
+    <!-- Ensure AJS is available -->
     <script>
         // Ensure AJS is available for context path
         if (typeof AJS === 'undefined') {
-            window.AJS = { contextPath: function() { return '$baseUrl'; } };
+            window.AJS = { 
+                contextPath: function() { 
+                    return '$req.contextPath'; 
+                } 
+            };
         }
+        
+        // Debug logging
+        console.log('WMPR Settings page loaded');
+        console.log('Context path:', (typeof AJS !== 'undefined' ? AJS.contextPath() : '$req.contextPath'));
     </script>
 
-    <!-- Load the bundled JavaScript -->
-    <script src="$baseUrl/download/resources/com.scriptrunnerhq.backend.vendor-api-example:wmpr-settings-resources/bundled.wmprSettings.js"></script>
 </body>
 </html> 

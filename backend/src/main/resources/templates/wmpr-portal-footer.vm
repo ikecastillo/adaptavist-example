@@ -1,16 +1,64 @@
 ## WMPR Portal Footer Template
 ## This template loads the JavaScript and CSS resources for the WMPR requests table
 
+## Load the web resources explicitly
+$webResourceManager.requireResource("com.scriptrunnerhq.vendors-api.backend:wmpr-portal-footer-resources")
+$webResourceManager.requireResource("com.atlassian.auiplugin:ajs")
+
 <div id="wmpr-portal-footer-section" class="wmpr-portal-footer-section">
     <!-- The React component will be mounted here via JavaScript -->
+    <div style="padding: 20px; text-align: center; color: #5e6c84;">
+        <div style="width: 30px; height: 30px; border: 3px solid #f3f3f3; border-top: 3px solid #0052cc; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 10px;"></div>
+        <p style="margin: 0; font-size: 14px;">Loading WMPR requests...</p>
+    </div>
 </div>
 
+<style>
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+    
+    .wmpr-portal-footer-section {
+        margin: 10px 0;
+        min-height: 50px;
+    }
+</style>
+
 <script type="text/javascript">
-    // Ensure the web resources are loaded
-    require(['wr!com.scriptrunnerhq.backend.vendor-api-example:wmpr-portal-footer-resources'], function() {
-        console.log('WMPR Portal Footer resources loaded');
-        
-        // The component initialization is handled by the bundled JavaScript file
-        // which listens for DOMContentLoaded and initializes the React component
-    });
+    // Ensure AJS is available
+    if (typeof AJS === 'undefined') {
+        window.AJS = { 
+            contextPath: function() { 
+                return '$req.contextPath'; 
+            } 
+        };
+    }
+    
+    // Debug logging
+    console.log('WMPR Portal Footer template loaded');
+    console.log('Context path:', (typeof AJS !== 'undefined' ? AJS.contextPath() : '$req.contextPath'));
+    
+    // Try to initialize the component immediately and on DOM ready
+    function initWMPRFooter() {
+        console.log('Attempting to initialize WMPR footer component');
+        if (typeof window.WMPRPortalFooter !== 'undefined' && window.WMPRPortalFooter.mount) {
+            window.WMPRPortalFooter.mount();
+        } else {
+            console.log('WMPR Portal Footer not ready, retrying in 1 second');
+            setTimeout(initWMPRFooter, 1000);
+        }
+    }
+    
+    // Try multiple initialization methods
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initWMPRFooter);
+    } else {
+        setTimeout(initWMPRFooter, 100);
+    }
+    
+    // Also try when AJS is ready
+    if (typeof AJS !== 'undefined' && AJS.toInit) {
+        AJS.toInit(initWMPRFooter);
+    }
 </script> 

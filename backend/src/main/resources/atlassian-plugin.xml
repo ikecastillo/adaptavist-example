@@ -36,7 +36,6 @@
     <resource type="download" name="wmpr-portal-footer.css" location="/css/wmpr-portal-footer.css"/>
     <dependency>com.atlassian.auiplugin:ajs</dependency>
     <dependency>com.atlassian.plugins.jquery:jquery</dependency>
-    <context>servicedesk.portal</context>
   </web-resource>
 
   <!-- Web Resource for Settings Page -->
@@ -45,23 +44,19 @@
     <resource type="download" name="bundled.wmprSettings.js" location="/frontend/bundled.wmprSettings.js"/>
     <dependency>com.atlassian.auiplugin:ajs</dependency>
     <dependency>com.atlassian.plugins.jquery:jquery</dependency>
-    <context>jira.admin</context>
   </web-resource>
 
   <!-- Service Desk Portal Footer Module -->
-  <web-panel key="wmpr-portal-footer" name="WMPR Requests Table" location="servicedesk.portal.footer" weight="10">
+  <web-panel key="wmpr-portal-footer" name="WMPR Requests Table" location="atl.general.content" weight="10">
     <description>Displays recent WMPR requests in the portal footer</description>
     <resource name="view" type="static" location="/templates/wmpr-portal-footer.vm"/>
   </web-panel>
 
-  <!-- Admin Menu Item -->
-  <web-item key="wmpr-settings-menu" name="WMPR Settings" section="admin_plugins_menu/user_interface" weight="50">
+  <!-- Project Admin Menu Item -->
+  <web-item key="wmpr-settings-menu" name="WMPR Settings" section="atl.jira.proj.config/projectgroup1" weight="50">
     <description>WMPR Requests Configuration</description>
     <label key="wmpr.settings.menu.label">WMPR Requests</label>
     <link linkId="wmpr-settings-link">/plugins/servlet/wmpr-settings</link>
-    <condition class="com.atlassian.jira.plugin.webfragment.conditions.JiraGlobalPermissionCondition">
-      <param name="permission">admin</param>
-    </condition>
   </web-item>
 
 </atlassian-plugin>

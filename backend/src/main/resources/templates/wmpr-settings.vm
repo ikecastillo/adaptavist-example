@@ -1,181 +1,125 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>WMPR Requests Settings</title>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+#set($decorator = "admin")
+#set($webResourceManager = $action.webResourceManager)
+$webResourceManager.requireResource("com.scriptrunnerhq.vendors-api.backend:wmpr-settings-resources")
+$webResourceManager.requireResource("com.atlassian.auiplugin:ajs")
+$webResourceManager.requireResource("com.atlassian.plugins.jquery:jquery")
+
+<div class="project-config-webpanel-container">
+    <div class="project-config-header">
+        <h2>WMPR Requests Settings</h2>
+        <p class="project-config-description">Configure the JQL query used to fetch WMPR requests for display in the Service Desk portal.</p>
+    </div>
     
-    ## Load the web resources explicitly
-    $webResourceManager.requireResource("com.scriptrunnerhq.vendors-api.backend:wmpr-settings-resources")
-    $webResourceManager.requireResource("com.atlassian.auiplugin:ajs")
-    $webResourceManager.requireResource("com.atlassian.plugins.jquery:jquery")
-    
-    <style>
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
-            background-color: #f4f5f7;
-            margin: 0;
-            padding: 20px;
-        }
-        
-        .settings-container {
-            max-width: 1200px;
-            margin: 0 auto;
-            background: white;
-            border-radius: 3px;
-            box-shadow: 0 1px 2px rgba(9, 30, 66, 0.25);
-            min-height: 500px;
-        }
-        
-        .simple-header {
-            padding: 20px;
-            border-bottom: 1px solid #dfe1e6;
-            background: #f4f5f7;
-        }
-        
-        .simple-header h1 {
-            margin: 0 0 8px 0;
-            color: #172b4d;
-            font-size: 24px;
-            font-weight: 600;
-        }
-        
-        .simple-header p {
-            margin: 0;
-            color: #5e6c84;
-            font-size: 14px;
-        }
-        
-        .loading-state {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 300px;
-            color: #5e6c84;
-        }
-        
-        /* Basic Atlaskit-like styles for fallback */
-        .wmpr-form {
-            padding: 24px;
-        }
-        
-        .wmpr-field {
-            margin-bottom: 16px;
-        }
-        
-        .wmpr-label {
-            display: block;
-            margin-bottom: 8px;
-            font-weight: 600;
-            color: #172b4d;
-        }
-        
-        .wmpr-input {
-            width: 100%;
-            padding: 8px 12px;
-            border: 1px solid #dfe1e6;
-            border-radius: 3px;
-            font-size: 14px;
-        }
-        
-        .wmpr-button {
-            background: #0052cc;
-            color: white;
-            border: none;
-            padding: 8px 16px;
-            border-radius: 3px;
-            cursor: pointer;
-            font-size: 14px;
-            margin-right: 8px;
-        }
-        
-        .wmpr-button:hover {
-            background: #0043a8;
-        }
-        
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-    </style>
-</head>
-<body>
-    <div class="settings-container">
-        <div class="simple-header">
-            <h1>WMPR Requests Settings</h1>
-            <p>Configure the JQL query used to fetch WMPR requests for display.</p>
-        </div>
-        
-        <div id="wmpr-settings-container">
-            <!-- Fallback content while React loads -->
-            <div class="loading-state">
-                <div>
-                    <div style="text-align: center;">
-                        <div style="width: 40px; height: 40px; border: 4px solid #f3f3f3; border-top: 4px solid #0052cc; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 16px;"></div>
-                        <p>Loading WMPR Settings...</p>
+    <div id="wmpr-settings-container" class="project-config-content">
+        <!-- Loading state while React component initializes -->
+        <div class="wmpr-loading-placeholder aui-page-panel">
+            <div class="aui-page-panel-inner">
+                <div class="aui-page-panel-content">
+                    <div style="text-align: center; padding: 40px;">
+                        <div class="aui-icon aui-icon-wait" style="font-size: 32px; margin-bottom: 16px;">Loading...</div>
+                        <p>Initializing WMPR Settings...</p>
                     </div>
                 </div>
             </div>
         </div>
     </div>
+</div>
 
-    <!-- Ensure AJS is available -->
-    <script type="text/javascript">
-        // Set up proper context path
-        window.contextPath = '$req.contextPath';
+<style>
+    .project-config-webpanel-container {
+        background: #fff;
+        margin: 0;
+        padding: 0;
+    }
+    
+    .project-config-header {
+        border-bottom: 1px solid #ddd;
+        padding: 20px;
+        background: #f5f5f5;
+    }
+    
+    .project-config-header h2 {
+        margin: 0 0 8px 0;
+        color: #333;
+        font-size: 20px;
+        font-weight: normal;
+    }
+    
+    .project-config-description {
+        margin: 0;
+        color: #707070;
+        font-size: 14px;
+    }
+    
+    .project-config-content {
+        min-height: 400px;
+    }
+    
+    /* Ensure React component styling integrates well */
+    #wmpr-settings-container .aui-page-panel {
+        border: none;
+        margin: 0;
+    }
+    
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+</style>
+
+<script type="text/javascript">
+    (function() {
+        // Set up proper context path for project admin
+        var contextPath = '$req.contextPath';
+        var projectKey = '$projectKey';
         
-        // Ensure AJS is available for context path
+        // Set global context
+        window.contextPath = contextPath || '';
+        window.projectKey = projectKey || '';
+        
+        // Ensure AJS is available
         if (typeof AJS === 'undefined') {
             window.AJS = { 
                 contextPath: function() { 
-                    return window.contextPath || '$req.contextPath'; 
+                    return window.contextPath; 
                 } 
-            };
-        } else {
-            // Override AJS context path if needed
-            AJS.contextPath = function() {
-                return window.contextPath || '$req.contextPath';
             };
         }
         
-        // Debug logging
-        console.log('WMPR Settings page loaded');
+        console.log('WMPR Settings loaded for project:', window.projectKey);
         console.log('Context path:', window.contextPath);
-        console.log('AJS context path:', (typeof AJS !== 'undefined' ? AJS.contextPath() : 'AJS not available'));
         
-        // Wait for DOM and try to initialize
+        // Initialize WMPR Settings component
         function initializeWMPRSettings() {
-            console.log('Attempting to initialize WMPR Settings...');
+            console.log('Initializing WMPR Settings in project admin context...');
+            
+            var container = document.getElementById('wmpr-settings-container');
+            if (!container) {
+                console.log('Settings container not found, retrying...');
+                setTimeout(initializeWMPRSettings, 1000);
+                return;
+            }
             
             if (typeof window.WMPRSettings !== 'undefined' && window.WMPRSettings.mount) {
                 console.log('Mounting WMPR Settings component');
                 window.WMPRSettings.mount();
             } else {
-                console.log('WMPRSettings not ready, checking again in 1 second...');
+                console.log('WMPRSettings not ready, retrying...');
                 setTimeout(initializeWMPRSettings, 1000);
             }
         }
         
-        // Try multiple initialization methods
+        // Initialize when ready
         if (document.readyState === 'loading') {
             document.addEventListener('DOMContentLoaded', initializeWMPRSettings);
         } else {
             setTimeout(initializeWMPRSettings, 100);
         }
         
-        // Also try when AJS is ready
-        if (typeof AJS !== 'undefined') {
+        // AJS ready
+        if (typeof AJS !== 'undefined' && AJS.toInit) {
             AJS.toInit(initializeWMPRSettings);
         }
         
-        // Fallback - try again after a longer delay
-        setTimeout(function() {
-            if (document.getElementById('wmpr-settings-container').querySelector('.loading-state')) {
-                console.log('React component still not loaded after 5 seconds, checking resources...');
-                console.log('Available global objects:', Object.keys(window).filter(k => k.includes('WMPR')));
-            }
-        }, 5000);
-    </script>
-
-</body>
-</html> 
+    })();
+</script> 

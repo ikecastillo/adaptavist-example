@@ -1,5 +1,11 @@
 package com.scriptrunnerhq.servlet;
 
+import com.atlassian.jira.component.ComponentAccessor;
+import com.atlassian.jira.project.Project;
+import com.atlassian.jira.project.ProjectManager;
+import com.atlassian.jira.security.PermissionManager;
+import com.atlassian.jira.security.Permissions;
+import com.atlassian.jira.user.ApplicationUser;
 import com.atlassian.plugin.spring.scanner.annotation.imports.ComponentImport;
 import com.atlassian.sal.api.auth.LoginUriProvider;
 import com.atlassian.sal.api.user.UserManager;
@@ -43,9 +49,34 @@ public class WMPRSettingsServlet extends HttpServlet {
             return;
         }
 
-        // Check if user has admin permissions (simplified check)
-        if (!userManager.isSystemAdmin(user.getUserKey())) {
-            response.sendError(HttpServletResponse.SC_FORBIDDEN, "Access denied. Administrator privileges required.");
+        // Get project key from request parameter
+        String projectKey = request.getParameter("projectKey");
+        if (projectKey == null || projectKey.trim().isEmpty()) {
+            response.sendError(HttpServletResponse.SC_BAD_REQUEST, "Project key is required");
+            return;
+        }
+
+        // Get Jira components
+        ProjectManager projectManager = ComponentAccessor.getProjectManager();
+        PermissionManager permissionManager = ComponentAccessor.getPermissionManager();
+        
+        // Get project
+        Project project = projectManager.getProjectByCurrentKey(projectKey);
+        if (project == null) {
+            response.sendError(HttpServletResponse.SC_NOT_FOUND, "Project not found: " + projectKey);
+            return;
+        }
+
+        // Get Jira user
+        ApplicationUser jiraUser = ComponentAccessor.getUserManager().getUserByKey(user.getUserKey().getStringValue());
+        if (jiraUser == null) {
+            response.sendError(HttpServletResponse.SC_FORBIDDEN, "User not found");
+            return;
+        }
+
+        // Check if user has project admin permissions
+        if (!permissionManager.hasPermission(Permissions.ADMINISTER, project, jiraUser)) {
+            response.sendError(HttpServletResponse.SC_FORBIDDEN, "Access denied. Project administrator privileges required.");
             return;
         }
 
@@ -54,6 +85,9 @@ public class WMPRSettingsServlet extends HttpServlet {
         Map<String, Object> context = new HashMap<>();
         context.put("user", user);
         context.put("baseUrl", getBaseUrl(request));
+        context.put("project", project);
+        context.put("projectKey", projectKey);
+        context.put("req", request);
         
         templateRenderer.render("/templates/wmpr-settings.vm", context, response.getWriter());
     }

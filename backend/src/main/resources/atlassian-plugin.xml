@@ -58,7 +58,10 @@
   <web-item key="wmpr-settings-menu" name="WMPR Settings" section="atl.jira.proj.config/projectgroup1" weight="50">
     <description>WMPR Requests Configuration</description>
     <label key="wmpr.settings.menu.label">WMPR Requests</label>
-    <link linkId="wmpr-settings-link">/plugins/servlet/wmpr-settings</link>
+    <link linkId="wmpr-settings-link">/plugins/servlet/wmpr-settings?projectKey=${project.key}</link>
+    <condition class="com.atlassian.jira.plugin.webfragment.conditions.HasProjectPermissionCondition">
+      <param name="permission">admin</param>
+    </condition>
   </web-item>
 
 </atlassian-plugin>

@@ -2,7 +2,7 @@
 <html>
 <head>
     <title>WMPR Requests Settings</title>
-    <meta name="decorator" content="atl.admin">
+    <meta name="decorator" content="atl.general">
     <meta name="admin.active.section" content="atl.jira.proj.config">
     <meta name="admin.active.tab" content="wmpr-settings-menu">
     <meta charset="utf-8">

@@ -82,14 +82,9 @@ public class WMPRSettingsServlet extends HttpServlet {
 
         response.setContentType("text/html;charset=utf-8");
         
-        Map<String, Object> context = new HashMap<>();
-        context.put("user", user);
-        context.put("baseUrl", getBaseUrl(request));
-        context.put("project", project);
-        context.put("projectKey", projectKey);
-        context.put("req", request);
-        
-        templateRenderer.render("/templates/wmpr-settings.vm", context, response.getWriter());
+        // Generate HTML directly like your working example
+        String html = generateProjectSettingsHtml(projectKey, project.getName());
+        response.getWriter().write(html);
     }
 
     private void redirectToLogin(HttpServletRequest request, HttpServletResponse response) throws IOException {
@@ -107,5 +102,81 @@ public class WMPRSettingsServlet extends HttpServlet {
 
     private String getBaseUrl(HttpServletRequest request) {
         return request.getScheme() + "://" + request.getServerName() + ":" + request.getServerPort() + request.getContextPath();
+    }
+
+    private String generateProjectSettingsHtml(String projectKey, String projectName) {
+        return "<!DOCTYPE html>\n" +
+            "<html>\n" +
+            "<head>\n" +
+            "    <title>WMPR Requests Settings - " + projectName + "</title>\n" +
+            "    <meta name=\"decorator\" content=\"atl.admin\">\n" +
+            "    <meta name=\"projectKey\" content=\"" + projectKey + "\">\n" +
+            "    <meta name=\"projectName\" content=\"" + projectName + "\">\n" +
+            "    <meta name=\"admin.active.section\" content=\"atl.jira.proj.config\">\n" +
+            "    <meta name=\"admin.active.tab\" content=\"wmpr-settings-menu\">\n" +
+            "    <meta charset=\"utf-8\">\n" +
+            "</head>\n" +
+            "<body>\n" +
+            "    <div id=\"wmpr-settings-container\" class=\"project-config-content\">\n" +
+            "        <header class=\"aui-page-header\">\n" +
+            "            <div class=\"aui-page-header-inner\">\n" +
+            "                <div class=\"aui-page-header-main\">\n" +
+            "                    <h1>WMPR Requests Settings</h1>\n" +
+            "                    <p class=\"aui-page-header-description\">\n" +
+            "                        Configure the JQL query used to fetch WMPR requests for display in the Service Desk portal.\n" +
+            "                    </p>\n" +
+            "                </div>\n" +
+            "            </div>\n" +
+            "        </header>\n" +
+            "        \n" +
+            "        <!-- Loading state while React component initializes -->\n" +
+            "        <div class=\"wmpr-loading-placeholder\">\n" +
+            "            <div style=\"text-align: center; padding: 40px;\">\n" +
+            "                <aui-spinner size=\"medium\"></aui-spinner>\n" +
+            "                <p>Initializing WMPR Settings...</p>\n" +
+            "            </div>\n" +
+            "        </div>\n" +
+            "    </div>\n" +
+            "\n" +
+            "    <script type=\"text/javascript\">\n" +
+            "        (function() {\n" +
+            "            // Set up proper context for React component\n" +
+            "            window.projectKey = '" + projectKey + "';\n" +
+            "            \n" +
+            "            // Initialize WMPR Settings component\n" +
+            "            function initializeWMPRSettings() {\n" +
+            "                console.log('Initializing WMPR Settings for project:', window.projectKey);\n" +
+            "                \n" +
+            "                var container = document.getElementById('wmpr-settings-container');\n" +
+            "                if (!container) {\n" +
+            "                    console.log('Settings container not found, retrying...');\n" +
+            "                    setTimeout(initializeWMPRSettings, 1000);\n" +
+            "                    return;\n" +
+            "                }\n" +
+            "                \n" +
+            "                if (typeof window.WMPRSettings !== 'undefined' && window.WMPRSettings.mount) {\n" +
+            "                    console.log('Mounting WMPR Settings component');\n" +
+            "                    window.WMPRSettings.mount();\n" +
+            "                } else {\n" +
+            "                    console.log('WMPRSettings not ready, retrying...');\n" +
+            "                    setTimeout(initializeWMPRSettings, 1000);\n" +
+            "                }\n" +
+            "            }\n" +
+            "            \n" +
+            "            // Initialize when ready\n" +
+            "            if (document.readyState === 'loading') {\n" +
+            "                document.addEventListener('DOMContentLoaded', initializeWMPRSettings);\n" +
+            "            } else {\n" +
+            "                setTimeout(initializeWMPRSettings, 100);\n" +
+            "            }\n" +
+            "            \n" +
+            "            // AJS ready\n" +
+            "            if (typeof AJS !== 'undefined' && AJS.toInit) {\n" +
+            "                AJS.toInit(initializeWMPRSettings);\n" +
+            "            }\n" +
+            "        })();\n" +
+            "    </script>\n" +
+            "</body>\n" +
+            "</html>";
     }
 } 

@@ -6,6 +6,7 @@ import com.atlassian.jira.project.ProjectManager;
 import com.atlassian.jira.security.PermissionManager;
 import com.atlassian.jira.security.Permissions;
 import com.atlassian.jira.user.ApplicationUser;
+import com.atlassian.jira.web.action.JiraWebActionSupport;
 import com.atlassian.plugin.spring.scanner.annotation.imports.ComponentImport;
 import com.atlassian.sal.api.auth.LoginUriProvider;
 import com.atlassian.sal.api.user.UserManager;
@@ -82,12 +83,27 @@ public class WMPRSettingsServlet extends HttpServlet {
 
         response.setContentType("text/html;charset=utf-8");
         
+        // Create a mock action for admin context
+        JiraWebActionSupport mockAction = new JiraWebActionSupport() {
+            @Override
+            public Project getSelectedProjectObject() {
+                return project;
+            }
+            
+            @Override
+            public String getSelectedProjectKey() {
+                return projectKey;
+            }
+        };
+        
         Map<String, Object> context = new HashMap<>();
         context.put("user", user);
         context.put("baseUrl", getBaseUrl(request));
         context.put("project", project);
         context.put("projectKey", projectKey);
         context.put("req", request);
+        context.put("action", mockAction);
+        context.put("webwork", mockAction);
         
         templateRenderer.render("/templates/wmpr-settings.vm", context, response.getWriter());
     }

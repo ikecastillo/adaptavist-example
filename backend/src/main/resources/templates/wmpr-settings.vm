@@ -2,21 +2,24 @@
 <html>
 <head>
     <title>WMPR Requests Settings</title>
-    <meta name="decorator" content="atl.admin">
+    <meta name="decorator" content="atl.general">
     <meta name="admin.active.section" content="atl.jira.proj.config">
     <meta name="admin.active.tab" content="wmpr-settings-menu">
+    <meta name="projectkey" content="$projectKey">
     <meta charset="utf-8">
     
     #set($webResourceManager = $action.webResourceManager)
     $webResourceManager.requireResource("com.scriptrunnerhq.vendors-api.backend:wmpr-settings-resources")
     $webResourceManager.requireResource("com.atlassian.auiplugin:ajs")
     $webResourceManager.requireResource("com.atlassian.plugins.jquery:jquery")
+    $webResourceManager.requireResource("jira.webresources:jira-global")
+    $webResourceManager.requireResource("com.atlassian.jira.jira-project-config-plugin:project-config")
 </head>
 <body>
     <div class="aui-page-panel">
         <div class="aui-page-panel-inner">
-            <div class="aui-page-panel-nav">
-                <!-- This will be populated by Jira's admin decorator -->
+            <div class="aui-page-panel-nav" id="project-config-panel-nav">
+                <!-- Project admin navigation will be injected here by Jira -->
             </div>
             
             <div class="aui-page-panel-content">
@@ -106,6 +109,47 @@
                 AJS.toInit(initializeWMPRSettings);
             }
             
+        })();
+    </script>
+
+    <script type="text/javascript">
+        // Initialize project admin navigation
+        (function() {
+            function initProjectNavigation() {
+                // Trigger Jira's project config navigation
+                if (typeof JIRA !== 'undefined' && JIRA.Project && JIRA.Project.Config) {
+                    JIRA.Project.Config.init();
+                } else if (typeof AJS !== 'undefined' && AJS.ProjectConfigInit) {
+                    AJS.ProjectConfigInit();
+                }
+                
+                // Alternative approach: trigger navigation load via DOM manipulation
+                var navPanel = document.getElementById('project-config-panel-nav');
+                if (navPanel && typeof AJS !== 'undefined') {
+                    // Add project context
+                    navPanel.setAttribute('data-project-key', '$projectKey');
+                    
+                    // Trigger project config navigation rendering
+                    if (AJS.$(navPanel).length > 0) {
+                        AJS.$(document).trigger('project-config-ready', {
+                            projectKey: '$projectKey',
+                            panel: navPanel
+                        });
+                    }
+                }
+            }
+            
+            // Initialize when ready
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', initProjectNavigation);
+            } else {
+                setTimeout(initProjectNavigation, 100);
+            }
+            
+            // AJS ready
+            if (typeof AJS !== 'undefined' && AJS.toInit) {
+                AJS.toInit(initProjectNavigation);
+            }
         })();
     </script>
 </body>

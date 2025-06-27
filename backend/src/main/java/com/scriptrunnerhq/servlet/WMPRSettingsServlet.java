@@ -75,7 +75,7 @@ public class WMPRSettingsServlet extends HttpServlet {
         }
 
         // Check if user has project admin permissions
-        if (!permissionManager.hasPermission(Permissions.ADMINISTER, project, jiraUser)) {
+        if (!permissionManager.hasPermission(Permissions.PROJECT_ADMIN, project, jiraUser)) {
             response.sendError(HttpServletResponse.SC_FORBIDDEN, "Access denied. Project administrator privileges required.");
             return;
         }

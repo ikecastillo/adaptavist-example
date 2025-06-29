@@ -20,8 +20,11 @@ interface ValidationResult {
 }
 
 const WMPRSettings: React.FC = () => {
+  // Get project key from window variable set by the servlet
+  const projectKey = (window as any).projectKey || 'global';
+  
   const [settings, setSettings] = useState<SettingsData>({
-    projectKey: 'global',
+    projectKey: projectKey,
     jql: '',
     useCustomJql: false,
     defaultJql: 'project = WMPR ORDER BY created DESC'
@@ -46,7 +49,14 @@ const WMPRSettings: React.FC = () => {
   const loadSettings = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`${getBaseUrl()}/rest/wmpr-requests/1.0/settings`, {
+      
+      // Include projectKey parameter in the API call
+      const url = new URL(`${getBaseUrl()}/rest/wmpr-requests/1.0/settings`);
+      if (projectKey && projectKey !== 'global') {
+        url.searchParams.append('projectKey', projectKey);
+      }
+      
+      const response = await fetch(url.toString(), {
         method: 'GET',
         headers: {
           'Accept': 'application/json',
@@ -110,7 +120,7 @@ const WMPRSettings: React.FC = () => {
       setSaveMessage(null);
 
       const payload = {
-        projectKey: settings.projectKey,
+        projectKey: projectKey, // Use the project key from window variable
         jql: data.jql,
         useCustomJql: data.useCustomJql
       };
@@ -126,7 +136,8 @@ const WMPRSettings: React.FC = () => {
       });
 
       if (!response.ok) {
-        throw new Error(`Failed to save settings: ${response.status}`);
+        const errorText = await response.text();
+        throw new Error(`Failed to save settings: ${response.status} - ${errorText}`);
       }
 
       const result = await response.json();

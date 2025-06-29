@@ -116,11 +116,26 @@ public class WMPRSettingsRestResource {
                         .build();
             }
 
+            System.out.println("Save settings request body: " + requestBody);
+            
             // Parse the request
-            Map<String, Object> request = gson.fromJson(requestBody, Map.class);
+            Map<String, Object> request;
+            try {
+                request = gson.fromJson(requestBody, Map.class);
+            } catch (Exception e) {
+                System.err.println("Failed to parse JSON request: " + e.getMessage());
+                Map<String, Object> errorResponse = new HashMap<>();
+                errorResponse.put("error", "Invalid JSON format: " + e.getMessage());
+                return Response.status(Response.Status.BAD_REQUEST)
+                        .entity(gson.toJson(errorResponse))
+                        .build();
+            }
+            
             String projectKey = (String) request.get("projectKey");
             String jql = (String) request.get("jql");
             Boolean useCustomJql = (Boolean) request.get("useCustomJql");
+            
+            System.out.println("Parsed settings - projectKey: " + projectKey + ", jql: " + jql + ", useCustomJql: " + useCustomJql);
             
             if (projectKey == null || projectKey.trim().isEmpty()) {
                 projectKey = "global";
@@ -128,11 +143,21 @@ public class WMPRSettingsRestResource {
             
             // Validate JQL if provided
             if (useCustomJql != null && useCustomJql && jql != null && !jql.trim().isEmpty()) {
-                SearchService.ParseResult parseResult = searchService.parseQuery(user, jql);
-                if (!parseResult.isValid()) {
+                try {
+                    SearchService.ParseResult parseResult = searchService.parseQuery(user, jql);
+                    if (!parseResult.isValid()) {
+                        System.err.println("JQL validation failed: " + parseResult.getErrors().toString());
+                        Map<String, Object> errorResponse = new HashMap<>();
+                        errorResponse.put("error", "Invalid JQL query");
+                        errorResponse.put("details", parseResult.getErrors().toString());
+                        return Response.status(Response.Status.BAD_REQUEST)
+                                .entity(gson.toJson(errorResponse))
+                                .build();
+                    }
+                } catch (Exception e) {
+                    System.err.println("JQL validation error: " + e.getMessage());
                     Map<String, Object> errorResponse = new HashMap<>();
-                    errorResponse.put("error", "Invalid JQL query");
-                    errorResponse.put("details", parseResult.getErrors().toString());
+                    errorResponse.put("error", "JQL validation failed: " + e.getMessage());
                     return Response.status(Response.Status.BAD_REQUEST)
                             .entity(gson.toJson(errorResponse))
                             .build();
@@ -140,14 +165,26 @@ public class WMPRSettingsRestResource {
             }
             
             // Save settings
-            PluginSettings settings = pluginSettingsFactory.createGlobalSettings();
-            String keyPrefix = SETTINGS_KEY_PREFIX + projectKey + ".";
-            
-            if (jql != null) {
-                settings.put(keyPrefix + "jql", jql);
-            }
-            if (useCustomJql != null) {
-                settings.put(keyPrefix + "useCustom", useCustomJql.toString());
+            try {
+                PluginSettings settings = pluginSettingsFactory.createGlobalSettings();
+                String keyPrefix = SETTINGS_KEY_PREFIX + projectKey + ".";
+                
+                if (jql != null) {
+                    settings.put(keyPrefix + "jql", jql);
+                    System.out.println("Saved JQL for " + projectKey + ": " + jql);
+                }
+                if (useCustomJql != null) {
+                    settings.put(keyPrefix + "useCustom", useCustomJql.toString());
+                    System.out.println("Saved useCustom for " + projectKey + ": " + useCustomJql);
+                }
+            } catch (Exception e) {
+                System.err.println("Failed to save settings: " + e.getMessage());
+                e.printStackTrace();
+                Map<String, Object> errorResponse = new HashMap<>();
+                errorResponse.put("error", "Failed to save settings: " + e.getMessage());
+                return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
+                        .entity(gson.toJson(errorResponse))
+                        .build();
             }
             
             Map<String, Object> response = new HashMap<>();
@@ -155,9 +192,13 @@ public class WMPRSettingsRestResource {
             response.put("message", "Settings saved successfully");
             response.put("projectKey", projectKey);
             
+            System.out.println("Settings saved successfully for project: " + projectKey);
+            
             return Response.ok(gson.toJson(response)).build();
             
         } catch (Exception e) {
+            System.err.println("Unexpected error in saveSettings: " + e.getMessage());
+            e.printStackTrace();
             Map<String, Object> errorResponse = new HashMap<>();
             errorResponse.put("error", "Failed to save settings: " + e.getMessage());
             return Response.status(Response.Status.INTERNAL_SERVER_ERROR)

@@ -139,6 +139,8 @@
                     <productVersion>${jira.version}</productVersion>
                     <productDataVersion>${jira.version}</productDataVersion>
                     <compressResources>false</compressResources>
+                    <!-- Skip REST docs generation to avoid dependency issues -->
+                    <skipRestDocGeneration>true</skipRestDocGeneration>
                     <!-- Uncomment to install TestKit backdoor in JIRA. -->
                     <!--
                     <pluginArtifacts>

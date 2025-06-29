@@ -27,8 +27,6 @@ module.exports = (_, { mode }) => {
             ]
         },
         entry: {
-            'vendorApiExample': './src/vendors-api-example.tsx',
-            'vendorApiSelectExample': './src/vendors-api-select-example.tsx',
             'wmprPortalFooter': './src/wmpr-portal-footer-integration.tsx',
             'wmprSettings': './src/wmpr-settings-integration.tsx'
         },
@@ -39,8 +37,6 @@ module.exports = (_, { mode }) => {
                 pluginKey: 'com.scriptrunnerhq.backend.vendor-api-example',
                 xmlDescriptors: xmlOutPath,
                 contextMap: {
-                    'vendorApiExample': 'jira.general',
-                    'vendorApiSelectExample': 'jira.general',
                     'wmprPortalFooter': 'servicedesk.portal',
                     'wmprSettings': 'jira.admin'
                 }

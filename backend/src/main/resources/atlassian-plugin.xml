@@ -7,20 +7,11 @@
     <vendor name="${project.organization.name}" url="${project.organization.url}"/>  
   </plugin-info>
   <resource type="i18n" name="i18n" location="jira-react-atlaskit"/>
-  <customfield-type name="SR Vendors API Example" i18n-name-key="sr-vendors-api-example.name" key="sr-vendors-api-example" class="com.scriptrunnerhq.CustomField">
-    <description key="sr-vendors-api-example.description"/>
-    <resource name="view" type="velocity" location="templates/view.vm"/>
-    <resource name="edit" type="velocity" location="templates/edit.vm"/>
-  </customfield-type>
-  <customfield-type name="SR Vendors API Select Example" i18n-name-key="sr-vendors-api-select-example.name" key="sr-vendors-api-select-example" class="com.scriptrunnerhq.CustomField">
-    <description key="sr-vendors-api-select-example.description"/>
-    <resource name="view" type="velocity" location="templates/view.vm"/>
-    <resource name="edit" type="velocity" location="templates/select-edit.vm"/>
-  </customfield-type>
 
   <!-- WMPR Requests REST API -->
   <rest name="WMPR Requests REST" key="wmpr-requests-rest" path="/wmpr-requests" version="1.0">
     <description>REST API for WMPR requests data and settings</description>
+    <package>com.scriptrunnerhq.rest</package>
   </rest>
 
   <!-- WMPR Settings Servlet -->

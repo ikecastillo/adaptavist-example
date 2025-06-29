@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import DynamicTable from '@atlaskit/dynamic-table';
 import Lozenge from '@atlaskit/lozenge';
 import Spinner from '@atlaskit/spinner';
+import Button from '@atlaskit/button';
 
 interface ServiceDeskRequest {
   key: string;
@@ -25,13 +26,20 @@ interface ApiResponse {
   };
 }
 
+interface ButtonConfig {
+  label: string;
+  url: string;
+}
+
 const WMPRPortalFooter: React.FC = () => {
   const [requests, setRequests] = useState<ServiceDeskRequest[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [buttonConfigs, setButtonConfigs] = useState<ButtonConfig[]>([]);
 
   useEffect(() => {
     fetchWMPRRequests();
+    fetchButtonConfigs();
   }, []);
 
   const getBaseUrl = () => {
@@ -96,6 +104,39 @@ const WMPRPortalFooter: React.FC = () => {
       setError(errorMessage);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchButtonConfigs = async () => {
+    try {
+      const baseUrl = getBaseUrl();
+      const apiUrl = `${baseUrl}/rest/wmpr-requests/1.0/settings`;
+      
+      const response = await fetch(apiUrl, {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+        },
+        credentials: 'same-origin'
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        // Extract button configurations from settings
+        const buttons: ButtonConfig[] = [];
+        for (let i = 1; i <= 5; i++) {
+          const label = data[`button${i}Label`];
+          const url = data[`button${i}Url`];
+          if (label && url) {
+            buttons.push({ label, url });
+          }
+        }
+        setButtonConfigs(buttons);
+      }
+    } catch (error) {
+      console.error('Error fetching button configs:', error);
+      // Don't show error for button configs, just silently fail
     }
   };
 
@@ -267,6 +308,30 @@ const WMPRPortalFooter: React.FC = () => {
           Recent WMPR Requests
         </h3>
       </div>
+      {buttonConfigs.length > 0 && (
+        <div style={{ 
+          padding: '16px',
+          borderBottom: '1px solid #dfe1e6',
+          background: '#fafbfc'
+        }}>
+          <div style={{ 
+            display: 'flex',
+            gap: '8px',
+            flexWrap: 'wrap',
+            justifyContent: 'center'
+          }}>
+            {buttonConfigs.map((config, index) => (
+              <Button
+                key={index}
+                appearance="primary"
+                onClick={() => window.open(config.url, '_blank', 'noopener,noreferrer')}
+              >
+                {config.label}
+              </Button>
+            ))}
+          </div>
+        </div>
+      )}
       <div style={{ padding: '0' }}>
         {requests.length === 0 ? (
           <div style={{ 

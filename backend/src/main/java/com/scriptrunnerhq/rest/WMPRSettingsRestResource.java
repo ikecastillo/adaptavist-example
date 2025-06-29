@@ -59,36 +59,32 @@ public class WMPRSettingsRestResource {
             
             Map<String, Object> response = new HashMap<>();
             
-            if (projectKey != null && !projectKey.trim().isEmpty()) {
-                // Get settings for specific project
-                String jql = (String) settings.get(SETTINGS_KEY_PREFIX + projectKey + ".jql");
-                Object useCustomObj = settings.get(SETTINGS_KEY_PREFIX + projectKey + ".useCustom");
-                
-                boolean useCustomJql = false;
-                if (useCustomObj instanceof Boolean) {
-                    useCustomJql = (Boolean) useCustomObj;
-                } else if (useCustomObj instanceof String) {
-                    useCustomJql = "true".equals(useCustomObj);
-                }
-                
-                response.put("projectKey", projectKey);
-                response.put("jql", jql != null ? jql : DEFAULT_JQL);
-                response.put("useCustomJql", useCustomJql);
-            } else {
-                // Get global settings
-                String globalJql = (String) settings.get(SETTINGS_KEY_PREFIX + "global.jql");
-                Object useCustomObj = settings.get(SETTINGS_KEY_PREFIX + "global.useCustom");
-                
-                boolean useCustomJql = false;
-                if (useCustomObj instanceof Boolean) {
-                    useCustomJql = (Boolean) useCustomObj;
-                } else if (useCustomObj instanceof String) {
-                    useCustomJql = "true".equals(useCustomObj);
-                }
-                
-                response.put("projectKey", "global");
-                response.put("jql", globalJql != null ? globalJql : DEFAULT_JQL);
-                response.put("useCustomJql", useCustomJql);
+            String settingsProjectKey = projectKey;
+            if (settingsProjectKey == null || settingsProjectKey.trim().isEmpty()) {
+                settingsProjectKey = "global";
+            }
+            
+            // Get JQL settings
+            String jql = (String) settings.get(SETTINGS_KEY_PREFIX + settingsProjectKey + ".jql");
+            Object useCustomObj = settings.get(SETTINGS_KEY_PREFIX + settingsProjectKey + ".useCustom");
+            
+            boolean useCustomJql = false;
+            if (useCustomObj instanceof Boolean) {
+                useCustomJql = (Boolean) useCustomObj;
+            } else if (useCustomObj instanceof String) {
+                useCustomJql = "true".equals(useCustomObj);
+            }
+            
+            response.put("projectKey", settingsProjectKey);
+            response.put("jql", jql != null ? jql : DEFAULT_JQL);
+            response.put("useCustomJql", useCustomJql);
+            
+            // Get button settings
+            for (int i = 1; i <= 5; i++) {
+                String buttonLabel = (String) settings.get(SETTINGS_KEY_PREFIX + settingsProjectKey + ".button" + i + "Label");
+                String buttonUrl = (String) settings.get(SETTINGS_KEY_PREFIX + settingsProjectKey + ".button" + i + "Url");
+                response.put("button" + i + "Label", buttonLabel != null ? buttonLabel : "");
+                response.put("button" + i + "Url", buttonUrl != null ? buttonUrl : "");
             }
             
             response.put("defaultJql", DEFAULT_JQL);
@@ -135,6 +131,14 @@ public class WMPRSettingsRestResource {
             String jql = (String) request.get("jql");
             Boolean useCustomJql = (Boolean) request.get("useCustomJql");
             
+            // Extract button settings
+            String[] buttonLabels = new String[5];
+            String[] buttonUrls = new String[5];
+            for (int i = 0; i < 5; i++) {
+                buttonLabels[i] = (String) request.get("button" + (i + 1) + "Label");
+                buttonUrls[i] = (String) request.get("button" + (i + 1) + "Url");
+            }
+            
             System.out.println("Parsed settings - projectKey: " + projectKey + ", jql: " + jql + ", useCustomJql: " + useCustomJql);
             
             if (projectKey == null || projectKey.trim().isEmpty()) {
@@ -176,6 +180,17 @@ public class WMPRSettingsRestResource {
                 if (useCustomJql != null) {
                     settings.put(keyPrefix + "useCustom", useCustomJql.toString());
                     System.out.println("Saved useCustom for " + projectKey + ": " + useCustomJql);
+                }
+                
+                // Save button settings
+                for (int i = 0; i < 5; i++) {
+                    String buttonLabel = buttonLabels[i];
+                    String buttonUrl = buttonUrls[i];
+                    
+                    settings.put(keyPrefix + "button" + (i + 1) + "Label", buttonLabel != null ? buttonLabel : "");
+                    settings.put(keyPrefix + "button" + (i + 1) + "Url", buttonUrl != null ? buttonUrl : "");
+                    
+                    System.out.println("Saved button" + (i + 1) + " for " + projectKey + " - Label: " + buttonLabel + ", URL: " + buttonUrl);
                 }
             } catch (Exception e) {
                 System.err.println("Failed to save settings: " + e.getMessage());

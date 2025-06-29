@@ -11,6 +11,16 @@ interface SettingsData {
   jql: string;
   useCustomJql: boolean;
   defaultJql: string;
+  button1Label: string;
+  button1Url: string;
+  button2Label: string;
+  button2Url: string;
+  button3Label: string;
+  button3Url: string;
+  button4Label: string;
+  button4Url: string;
+  button5Label: string;
+  button5Url: string;
 }
 
 interface ValidationResult {
@@ -27,7 +37,17 @@ const WMPRSettings: React.FC = () => {
     projectKey: projectKey,
     jql: '',
     useCustomJql: false,
-    defaultJql: 'project = WMPR ORDER BY created DESC'
+    defaultJql: 'project = WMPR ORDER BY created DESC',
+    button1Label: '',
+    button1Url: '',
+    button2Label: '',
+    button2Url: '',
+    button3Label: '',
+    button3Url: '',
+    button4Label: '',
+    button4Url: '',
+    button5Label: '',
+    button5Url: ''
   });
   
   const [loading, setLoading] = useState<boolean>(true);
@@ -122,7 +142,17 @@ const WMPRSettings: React.FC = () => {
       const payload = {
         projectKey: projectKey, // Use the project key from window variable
         jql: data.jql,
-        useCustomJql: data.useCustomJql
+        useCustomJql: data.useCustomJql,
+        button1Label: data.button1Label || '',
+        button1Url: data.button1Url || '',
+        button2Label: data.button2Label || '',
+        button2Url: data.button2Url || '',
+        button3Label: data.button3Label || '',
+        button3Url: data.button3Url || '',
+        button4Label: data.button4Label || '',
+        button4Url: data.button4Url || '',
+        button5Label: data.button5Label || '',
+        button5Url: data.button5Url || ''
       };
 
       const response = await fetch(`${getBaseUrl()}/rest/wmpr-requests/1.0/settings`, {
@@ -252,6 +282,64 @@ const WMPRSettings: React.FC = () => {
               )}
             </Field>
 
+            <div style={{ marginTop: '32px' }}>
+              <h3 style={{ marginBottom: '16px', color: '#172b4d' }}>Service Desk Footer Buttons</h3>
+              <SectionMessage appearance="info">
+                <p>
+                  Configure up to 5 buttons to display above the WMPR requests table. 
+                  Only buttons with both label and URL filled will be shown.
+                </p>
+              </SectionMessage>
+              
+              {[1, 2, 3, 4, 5].map((num) => (
+                <div key={num} style={{ 
+                  marginTop: '16px', 
+                  padding: '16px', 
+                  border: '1px solid #dfe1e6', 
+                  borderRadius: '3px',
+                  backgroundColor: '#fafbfc'
+                }}>
+                  <h4 style={{ margin: '0 0 12px 0', fontSize: '14px', color: '#172b4d' }}>
+                    Button {num}
+                  </h4>
+                  
+                  <Field
+                    name={`button${num}Label`}
+                    defaultValue={settings[`button${num}Label` as keyof SettingsData] as string}
+                  >
+                    {({ fieldProps }) => (
+                      <div style={{ marginBottom: '12px' }}>
+                        <label style={{ display: 'block', marginBottom: '4px', fontSize: '12px', fontWeight: 'bold' }}>
+                          Button Label
+                        </label>
+                        <Textfield
+                          {...fieldProps}
+                          placeholder={`Button ${num} Label`}
+                        />
+                      </div>
+                    )}
+                  </Field>
+                  
+                  <Field
+                    name={`button${num}Url`}
+                    defaultValue={settings[`button${num}Url` as keyof SettingsData] as string}
+                  >
+                    {({ fieldProps }) => (
+                      <div>
+                        <label style={{ display: 'block', marginBottom: '4px', fontSize: '12px', fontWeight: 'bold' }}>
+                          Button URL
+                        </label>
+                        <Textfield
+                          {...fieldProps}
+                          placeholder={`https://example.com`}
+                        />
+                      </div>
+                    )}
+                  </Field>
+                </div>
+              ))}
+            </div>
+
             <FormFooter>
               <ButtonGroup>
                 <Button 
@@ -289,6 +377,21 @@ const WMPRSettings: React.FC = () => {
         }}>
           {settings.useCustomJql && settings.jql ? settings.jql : settings.defaultJql}
         </code>
+        
+        <h4 style={{ margin: '16px 0 8px 0', fontSize: '14px', fontWeight: 'bold' }}>Configured Buttons:</h4>
+        {[1, 2, 3, 4, 5].map((num) => {
+          const label = settings[`button${num}Label` as keyof SettingsData] as string;
+          const url = settings[`button${num}Url` as keyof SettingsData] as string;
+          return (
+            <div key={num} style={{ margin: '4px 0', fontSize: '12px' }}>
+              <strong>Button {num}:</strong> {
+                label && url 
+                  ? `"${label}" → ${url}` 
+                  : <span style={{ color: '#6B778C' }}>Not configured</span>
+              }
+            </div>
+          );
+        })}
       </div>
     </div>
   );

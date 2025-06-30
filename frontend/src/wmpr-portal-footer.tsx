@@ -43,21 +43,38 @@ const WMPRPortalFooter: React.FC = () => {
   }, []);
 
   const getBaseUrl = () => {
-    // Multiple methods to get the correct base URL
+    // Get the base URL for API calls
     let baseUrl = (window as any).location.origin;
     let contextPath = '';
     
-    // Try to get context path from global variables
-    if ((window as any).contextPath) {
-      contextPath = (window as any).contextPath;
-    } else if ((window as any).AJS?.contextPath) {
+    // Try to get context path from AJS (most reliable method)
+    if ((window as any).AJS?.contextPath) {
       contextPath = (window as any).AJS.contextPath();
+    } else if ((window as any).contextPath) {
+      contextPath = (window as any).contextPath;
     } else {
-      // Extract from current URL
+      // Fallback: detect context path from URL
       const pathname = window.location.pathname;
-      const parts = pathname.split('/');
-      if (parts.length > 1 && parts[1] && !parts[1].includes('servicedesk')) {
-        contextPath = '/' + parts[1];
+      const parts = pathname.split('/').filter(part => part.length > 0);
+      
+      // For URLs like jira.samsungaustin.com/servicedesk/customer/portal/1
+      // We don't want any context path - API is at root level
+      if (parts.length > 0) {
+        const firstPart = parts[0];
+        
+        // If first part is 'servicedesk', this is root-level JIRA (no context path)
+        if (firstPart === 'servicedesk') {
+          contextPath = '';
+        } 
+        // If first part is 'jira', this is context-path JIRA (like localhost:2990/jira)
+        else if (firstPart === 'jira') {
+          contextPath = '/jira';
+        }
+        // For other first parts, only use if they're not servicedesk-related
+        else if (!firstPart.includes('servicedesk') && !firstPart.includes('customer') && !firstPart.includes('portal')) {
+          contextPath = '/' + firstPart;
+        }
+        // Otherwise assume root context (no context path)
       }
     }
     
@@ -67,7 +84,10 @@ const WMPRPortalFooter: React.FC = () => {
     }
     
     const fullUrl = `${baseUrl}${contextPath}`;
-    console.log('WMPR API Base URL:', fullUrl);
+    console.log('WMPR Portal Footer - API Base URL:', fullUrl);
+    console.log('WMPR Portal Footer - Current pathname:', window.location.pathname);
+    console.log('WMPR Portal Footer - Detected context path:', contextPath || '(none - root level)');
+    console.log('WMPR Portal Footer - Window origin:', baseUrl);
     return fullUrl;
   };
 

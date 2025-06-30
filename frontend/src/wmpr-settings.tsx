@@ -5,6 +5,10 @@ import Form, { Field, FormFooter, HelperMessage, ErrorMessage } from '@atlaskit/
 import Checkbox from '@atlaskit/checkbox';
 import SectionMessage from '@atlaskit/section-message';
 import Spinner from '@atlaskit/spinner';
+import DynamicTable from '@atlaskit/dynamic-table';
+import Tabs, { Tab, TabList, TabPanel } from '@atlaskit/tabs';
+import { type SelectedType } from '@atlaskit/tabs/types';
+import VisuallyHidden from '@atlaskit/visually-hidden';
 
 interface SettingsData {
   projectKey: string;
@@ -27,6 +31,13 @@ interface ValidationResult {
   valid: boolean;
   message?: string;
   errors?: string;
+}
+
+interface ButtonData {
+  buttonNumber: number;
+  label: string;
+  url: string;
+  isConfigured: boolean;
 }
 
 const WMPRSettings: React.FC = () => {
@@ -55,6 +66,8 @@ const WMPRSettings: React.FC = () => {
   const [validating, setValidating] = useState<boolean>(false);
   const [validationResult, setValidationResult] = useState<ValidationResult | null>(null);
   const [saveMessage, setSaveMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
+  const [selectedTab, setSelectedTab] = useState<number>(0);
+  const [statusMessage, setStatusMessage] = useState<string | null>(null);
 
   useEffect(() => {
     loadSettings();
@@ -186,212 +199,754 @@ const WMPRSettings: React.FC = () => {
     }
   };
 
+  const handleTabChange = (index: SelectedType) => {
+    setSelectedTab(index);
+    
+    // Set status messages for different tabs
+    switch(index) {
+      case 0:
+        setStatusMessage('JQL Configuration tab selected');
+        break;
+      case 1:
+        setStatusMessage('Portal Buttons tab selected');
+        break;
+      case 2:
+        setStatusMessage('Reports & Analytics tab selected');
+        break;
+      case 3:
+        setStatusMessage('Advanced Settings tab selected');
+        break;
+      case 4:
+        setStatusMessage('Help & Documentation tab selected');
+        break;
+      default:
+        setStatusMessage(null);
+    }
+  };
+
+  // Prepare button data for the table
+  const getButtonsTableData = () => {
+    const buttons: ButtonData[] = [];
+    for (let i = 1; i <= 5; i++) {
+      const label = settings[`button${i}Label` as keyof SettingsData] as string;
+      const url = settings[`button${i}Url` as keyof SettingsData] as string;
+      buttons.push({
+        buttonNumber: i,
+        label: label || '',
+        url: url || '',
+        isConfigured: !!(label && url)
+      });
+    }
+    return buttons;
+  };
+
+  const buttonTableHead = {
+    cells: [
+      {
+        key: 'button',
+        content: 'Button #',
+        isSortable: false,
+        width: 15,
+      },
+      {
+        key: 'label',
+        content: 'Label',
+        isSortable: false,
+        width: 25,
+      },
+      {
+        key: 'url',
+        content: 'URL',
+        isSortable: false,
+        width: 40,
+      },
+      {
+        key: 'status',
+        content: 'Status',
+        isSortable: false,
+        width: 20,
+      },
+    ],
+  };
+
+  const buttonTableRows = getButtonsTableData().map((button, index) => ({
+    key: `button-row-${index}`,
+    cells: [
+      {
+        key: 'button',
+        content: (
+          <span style={{ fontWeight: 'bold', color: '#172b4d' }}>
+            {button.buttonNumber}
+          </span>
+        ),
+      },
+      {
+        key: 'label',
+        content: (
+          <span style={{ 
+            color: button.label ? '#172b4d' : '#8993a4',
+            fontStyle: button.label ? 'normal' : 'italic'
+          }}>
+            {button.label || 'Not set'}
+          </span>
+        ),
+      },
+      {
+        key: 'url',
+        content: (
+          <span style={{ 
+            color: button.url ? '#0052cc' : '#8993a4',
+            fontStyle: button.url ? 'normal' : 'italic',
+            fontSize: '12px'
+          }}>
+            {button.url ? (
+              <a href={button.url} target="_blank" rel="noopener noreferrer">
+                {button.url.length > 50 ? `${button.url.substring(0, 50)}...` : button.url}
+              </a>
+            ) : 'Not set'}
+          </span>
+        ),
+      },
+      {
+        key: 'status',
+        content: (
+          <span style={{ 
+            display: 'inline-block',
+            padding: '2px 8px',
+            borderRadius: '3px',
+            fontSize: '11px',
+            fontWeight: 'bold',
+            backgroundColor: button.isConfigured ? '#e3fcef' : '#ffebe6',
+            color: button.isConfigured ? '#006644' : '#bf2600',
+            border: `1px solid ${button.isConfigured ? '#79e2a0' : '#ffbdad'}`
+          }}>
+            {button.isConfigured ? 'Configured' : 'Not Set'}
+          </span>
+        ),
+      },
+    ],
+  }));
+
   if (loading) {
     return (
-      <div style={{ padding: '40px', textAlign: 'center' }}>
+      <div style={{ 
+        display: 'flex', 
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '60px 40px',
+        background: 'linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%)',
+        borderRadius: '8px',
+        margin: '20px'
+      }}>
         <Spinner size="large" />
-        <p style={{ marginTop: '16px' }}>Loading settings...</p>
+        <p style={{ 
+          marginTop: '16px', 
+          color: '#5e6c84',
+          fontSize: '16px',
+          fontWeight: '500' 
+        }}>
+          Loading WMPR Settings...
+        </p>
+        <p style={{ 
+          margin: '8px 0 0 0',
+          color: '#8993a4',
+          fontSize: '14px' 
+        }}>
+          Fetching configuration data
+        </p>
       </div>
     );
   }
 
+  const containerStyle: React.CSSProperties = {
+    maxWidth: '1200px',
+    margin: '0 auto',
+    padding: '0',
+    fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen", "Ubuntu", "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif'
+  };
+
+  const headerStyle: React.CSSProperties = {
+    background: 'linear-gradient(135deg, #0052cc 0%, #0065ff 100%)',
+    color: 'white',
+    padding: '32px 40px',
+    borderRadius: '8px 8px 0 0',
+    marginBottom: '0'
+  };
+
+  const contentStyle: React.CSSProperties = {
+    background: '#fff',
+    borderRadius: '0 0 8px 8px',
+    boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+    overflow: 'hidden'
+  };
+
+  const sectionStyle: React.CSSProperties = {
+    marginBottom: '32px',
+    padding: '32px',
+    background: '#f8f9fa',
+    border: '1px solid #e1e5e9',
+    borderRadius: '8px'
+  };
+
+  const sectionTitleStyle: React.CSSProperties = {
+    margin: '0 0 16px 0',
+    color: '#172b4d',
+    fontSize: '18px',
+    fontWeight: '600',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px'
+  };
+
+  const tabPanelStyle: React.CSSProperties = {
+    padding: '32px',
+    minHeight: '400px'
+  };
+
   return (
-    <div style={{ maxWidth: '800px', margin: '0 auto', padding: '24px' }}>
-      <h1 style={{ marginBottom: '24px', color: '#172b4d' }}>WMPR Requests Settings</h1>
-      
-      <SectionMessage appearance="info">
-        <p>
-          Configure the JQL query used to fetch WMPR requests for display in the Service Desk portal footer.
-          Leave "Use Custom JQL" unchecked to use the default query.
+    <div style={containerStyle}>
+      {/* Header */}
+      <div style={headerStyle}>
+        <h1 style={{ 
+          margin: '0 0 8px 0', 
+          fontSize: '28px', 
+          fontWeight: '600' 
+        }}>
+          WMPR Requests Settings
+        </h1>
+        <p style={{ 
+          margin: '0',
+          fontSize: '16px',
+          color: 'rgba(255, 255, 255, 0.9)',
+          lineHeight: '1.5'
+        }}>
+          Configure JQL queries and service desk portal buttons for WMPR request display. 
+          Customize how your team accesses and views work management process requests.
         </p>
-      </SectionMessage>
+      </div>
 
-      {saveMessage && (
-        <SectionMessage appearance={saveMessage.type === 'success' ? 'confirmation' : 'error'}>
-          <p>{saveMessage.text}</p>
-        </SectionMessage>
-      )}
+      {/* Content with Atlaskit Tabs */}
+      <div style={contentStyle}>
+        {statusMessage && (
+          <VisuallyHidden role="status">{statusMessage}</VisuallyHidden>
+        )}
 
-      <Form onSubmit={handleSubmit}>
-        {({ formProps }) => (
-          <form {...formProps}>
-            <Field
-              name="useCustomJql"
-              defaultValue={settings.useCustomJql}
-            >
-              {({ fieldProps }) => (
-                <Checkbox
-                  {...fieldProps}
-                  label="Use Custom JQL"
-                />
-              )}
-            </Field>
+        {saveMessage && (
+          <div style={{ padding: '20px 32px 0' }}>
+            <SectionMessage appearance={saveMessage.type === 'success' ? 'success' : 'error'}>
+              <p>{saveMessage.text}</p>
+            </SectionMessage>
+          </div>
+        )}
 
-            <Field
-              name="jql"
-              defaultValue={settings.jql}
-              validate={(value) => {
-                if (!value || value.trim() === '') {
-                  return 'JQL is required when using custom JQL';
-                }
-                return undefined;
-              }}
-            >
-              {({ fieldProps, error }) => (
-                <div style={{ marginTop: '16px' }}>
-                  <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
-                    JQL Query
-                  </label>
-                  <Textfield
-                    {...fieldProps}
-                    placeholder={settings.defaultJql}
-                    onBlur={(e) => {
-                      fieldProps.onBlur(e);
-                      if (e.target.value && e.target.value.trim() !== '') {
-                        validateJql(e.target.value);
-                      } else {
-                        setValidationResult(null);
-                      }
-                    }}
+        <Tabs onChange={handleTabChange} selected={selectedTab} id="wmpr-settings-tabs">
+          <TabList>
+            <Tab>🔍 JQL Configuration</Tab>
+            <Tab>🔘 Portal Buttons</Tab>
+            <Tab>📊 Reports & Analytics</Tab>
+            <Tab>⚙️ Advanced Settings</Tab>
+            <Tab>📚 Help & Documentation</Tab>
+          </TabList>
+
+          {/* JQL Configuration Tab */}
+          <TabPanel>
+            <div style={tabPanelStyle}>
+              <div style={sectionStyle}>
+                <h2 style={sectionTitleStyle}>
+                  <span>🔍</span>
+                  JQL Query Configuration
+                </h2>
+                
+                <SectionMessage appearance="information">
+                  <p>
+                    Define a custom JQL query to control which WMPR requests appear in the Service Desk portal footer.
+                    Leave "Use Custom JQL" unchecked to use the default query.
+                  </p>
+                </SectionMessage>
+
+                <Form onSubmit={handleSubmit}>
+                  {({ formProps }) => (
+                    <form {...formProps}>
+                      <div style={{ marginTop: '24px' }}>
+                        <Field
+                          name="useCustomJql"
+                          defaultValue={settings.useCustomJql}
+                        >
+                          {({ fieldProps }) => (
+                            <Checkbox
+                              name={fieldProps.name}
+                              isChecked={fieldProps.value}
+                              onChange={(event) => fieldProps.onChange(event.target.checked)}
+                              label="Use Custom JQL Query"
+                            />
+                          )}
+                        </Field>
+
+                        <Field
+                          name="jql"
+                          defaultValue={settings.jql}
+                          validate={(value) => {
+                            if (!value || value.trim() === '') {
+                              return 'JQL is required when using custom JQL';
+                            }
+                            return undefined;
+                          }}
+                        >
+                          {({ fieldProps, error }) => (
+                            <div style={{ marginTop: '20px' }}>
+                              <label style={{ 
+                                display: 'block', 
+                                marginBottom: '8px', 
+                                fontWeight: '600',
+                                color: '#172b4d'
+                              }}>
+                                Custom JQL Query
+                              </label>
+                              <Textfield
+                                {...fieldProps}
+                                placeholder={settings.defaultJql}
+                                onBlur={() => {
+                                  if (fieldProps.value && fieldProps.value.trim() !== '') {
+                                    validateJql(fieldProps.value);
+                                  } else {
+                                    setValidationResult(null);
+                                  }
+                                }}
+                              />
+                              {error && <ErrorMessage>{error}</ErrorMessage>}
+                              
+                              {validating && (
+                                <div style={{ 
+                                  marginTop: '8px', 
+                                  display: 'flex', 
+                                  alignItems: 'center',
+                                  color: '#5e6c84'
+                                }}>
+                                  <Spinner size="small" />
+                                  <span style={{ marginLeft: '8px' }}>Validating JQL...</span>
+                                </div>
+                              )}
+                              
+                              {validationResult && !validating && (
+                                <div style={{ marginTop: '8px' }}>
+                                  {validationResult.valid ? (
+                                    <HelperMessage>✅ JQL is valid</HelperMessage>
+                                  ) : (
+                                    <ErrorMessage>
+                                      ❌ {validationResult.message || validationResult.errors}
+                                    </ErrorMessage>
+                                  )}
+                                </div>
+                              )}
+                              
+                              <HelperMessage>
+                                Default JQL: <code style={{ 
+                                  background: '#f4f5f7', 
+                                  padding: '2px 4px', 
+                                  borderRadius: '3px' 
+                                }}>
+                                  {settings.defaultJql}
+                                </code>
+                              </HelperMessage>
+                            </div>
+                          )}
+                        </Field>
+                      </div>
+
+                      <FormFooter>
+                        <ButtonGroup>
+                          <Button 
+                            type="submit" 
+                            appearance="primary"
+                            isDisabled={saving}
+                          >
+                            {saving ? 'Saving...' : 'Save JQL Settings'}
+                          </Button>
+                          <Button 
+                            onClick={loadSettings}
+                            isDisabled={saving}
+                          >
+                            Reset
+                          </Button>
+                        </ButtonGroup>
+                      </FormFooter>
+                    </form>
+                  )}
+                </Form>
+              </div>
+            </div>
+          </TabPanel>
+
+          {/* Portal Buttons Tab */}
+          <TabPanel>
+            <div style={tabPanelStyle}>
+              <div style={sectionStyle}>
+                <h2 style={sectionTitleStyle}>
+                  <span>🔘</span>
+                  Service Desk Portal Buttons
+                </h2>
+                
+                <SectionMessage appearance="information">
+                  <p>
+                    Configure up to 5 action buttons that will appear above the WMPR requests table in the service desk portal. 
+                    Only buttons with both label and URL configured will be displayed.
+                  </p>
+                </SectionMessage>
+
+                {/* Current Buttons Status Table */}
+                <div style={{ marginTop: '24px', marginBottom: '32px' }}>
+                  <h3 style={{ 
+                    margin: '0 0 16px 0', 
+                    fontSize: '16px', 
+                    fontWeight: '600',
+                    color: '#172b4d'
+                  }}>
+                    Current Configuration
+                  </h3>
+                  <DynamicTable
+                    head={buttonTableHead}
+                    rows={buttonTableRows}
+                    defaultSortKey="button"
+                    defaultSortOrder="ASC"
+                    emptyView={<span>No buttons configured</span>}
                   />
-                  {error && <ErrorMessage>{error}</ErrorMessage>}
-                  
-                  {validating && (
-                    <div style={{ marginTop: '8px', display: 'flex', alignItems: 'center' }}>
-                      <Spinner size="small" />
-                      <span style={{ marginLeft: '8px', color: '#5e6c84' }}>Validating JQL...</span>
-                    </div>
-                  )}
-                  
-                  {validationResult && !validating && (
-                    <div style={{ marginTop: '8px' }}>
-                      {validationResult.valid ? (
-                        <HelperMessage>✅ JQL is valid</HelperMessage>
-                      ) : (
-                        <ErrorMessage>
-                          ❌ {validationResult.message || validationResult.errors}
-                        </ErrorMessage>
-                      )}
-                    </div>
-                  )}
-                  
-                  <HelperMessage>
-                    Default JQL: <code>{settings.defaultJql}</code>
-                  </HelperMessage>
                 </div>
-              )}
-            </Field>
 
-            <div style={{ marginTop: '32px' }}>
-              <h3 style={{ marginBottom: '16px', color: '#172b4d' }}>Service Desk Footer Buttons</h3>
-              <SectionMessage appearance="info">
-                <p>
-                  Configure up to 5 buttons to display above the WMPR requests table. 
-                  Only buttons with both label and URL filled will be shown.
-                </p>
-              </SectionMessage>
-              
-              {[1, 2, 3, 4, 5].map((num) => (
-                <div key={num} style={{ 
-                  marginTop: '16px', 
-                  padding: '16px', 
-                  border: '1px solid #dfe1e6', 
-                  borderRadius: '3px',
-                  backgroundColor: '#fafbfc'
+                {/* Button Configuration Forms */}
+                <Form onSubmit={handleSubmit}>
+                  {({ formProps }) => (
+                    <form {...formProps}>
+                      <h3 style={{ 
+                        margin: '0 0 20px 0', 
+                        fontSize: '16px', 
+                        fontWeight: '600',
+                        color: '#172b4d'
+                      }}>
+                        Configure Buttons
+                      </h3>
+                      
+                      <div style={{ 
+                        display: 'grid', 
+                        gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', 
+                        gap: '20px' 
+                      }}>
+                        {[1, 2, 3, 4, 5].map((num) => (
+                          <div key={num} style={{ 
+                            padding: '20px', 
+                            border: '1px solid #dfe1e6', 
+                            borderRadius: '8px',
+                            backgroundColor: '#fff'
+                          }}>
+                            <h4 style={{ 
+                              margin: '0 0 16px 0', 
+                              fontSize: '14px', 
+                              color: '#172b4d',
+                              fontWeight: '600',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '8px'
+                            }}>
+                              <span style={{
+                                display: 'inline-block',
+                                width: '20px',
+                                height: '20px',
+                                borderRadius: '50%',
+                                background: '#0052cc',
+                                color: 'white',
+                                fontSize: '12px',
+                                lineHeight: '20px',
+                                textAlign: 'center',
+                                fontWeight: 'bold'
+                              }}>
+                                {num}
+                              </span>
+                              Button {num}
+                            </h4>
+                            
+                            <Field
+                              name={`button${num}Label`}
+                              defaultValue={settings[`button${num}Label` as keyof SettingsData] as string}
+                            >
+                              {({ fieldProps }) => (
+                                <div style={{ marginBottom: '16px' }}>
+                                  <label style={{ 
+                                    display: 'block', 
+                                    marginBottom: '6px', 
+                                    fontSize: '12px', 
+                                    fontWeight: '600',
+                                    color: '#5e6c84',
+                                    textTransform: 'uppercase'
+                                  }}>
+                                    Button Label
+                                  </label>
+                                  <Textfield
+                                    {...fieldProps}
+                                    placeholder={`e.g., "Create Request"`}
+                                  />
+                                </div>
+                              )}
+                            </Field>
+                            
+                            <Field
+                              name={`button${num}Url`}
+                              defaultValue={settings[`button${num}Url` as keyof SettingsData] as string}
+                            >
+                              {({ fieldProps }) => (
+                                <div>
+                                  <label style={{ 
+                                    display: 'block', 
+                                    marginBottom: '6px', 
+                                    fontSize: '12px', 
+                                    fontWeight: '600',
+                                    color: '#5e6c84',
+                                    textTransform: 'uppercase'
+                                  }}>
+                                    Button URL
+                                  </label>
+                                  <Textfield
+                                    {...fieldProps}
+                                    placeholder="https://example.com/create-request"
+                                  />
+                                </div>
+                              )}
+                            </Field>
+                          </div>
+                        ))}
+                      </div>
+
+                      <FormFooter>
+                        <ButtonGroup>
+                          <Button 
+                            type="submit" 
+                            appearance="primary"
+                            isDisabled={saving}
+                          >
+                            {saving ? 'Saving...' : 'Save Button Settings'}
+                          </Button>
+                          <Button 
+                            onClick={loadSettings}
+                            isDisabled={saving}
+                          >
+                            Reset
+                          </Button>
+                        </ButtonGroup>
+                      </FormFooter>
+                    </form>
+                  )}
+                </Form>
+              </div>
+            </div>
+          </TabPanel>
+
+          {/* Reports & Analytics Tab (Dummy) */}
+          <TabPanel>
+            <div style={tabPanelStyle}>
+              <div style={sectionStyle}>
+                <h2 style={sectionTitleStyle}>
+                  <span>📊</span>
+                  Reports & Analytics
+                </h2>
+                
+                <SectionMessage appearance="information">
+                  <p>
+                    View detailed analytics and reports on WMPR request usage, performance metrics, and user engagement statistics.
+                  </p>
+                </SectionMessage>
+
+                <div style={{ marginTop: '24px' }}>
+                  <h3 style={{ color: '#172b4d', marginBottom: '16px' }}>Coming Soon</h3>
+                  <p style={{ color: '#5e6c84', lineHeight: '1.6' }}>
+                    This section will include comprehensive analytics for:
+                  </p>
+                  <ul style={{ color: '#5e6c84', lineHeight: '1.6', marginLeft: '20px' }}>
+                    <li>Request volume and trends over time</li>
+                    <li>Most frequently accessed request types</li>
+                    <li>Button click analytics and conversion rates</li>
+                    <li>User engagement patterns</li>
+                    <li>Performance metrics and load times</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </TabPanel>
+
+          {/* Advanced Settings Tab (Dummy) */}
+          <TabPanel>
+            <div style={tabPanelStyle}>
+              <div style={sectionStyle}>
+                <h2 style={sectionTitleStyle}>
+                  <span>⚙️</span>
+                  Advanced Settings
+                </h2>
+                
+                <SectionMessage appearance="information">
+                  <p>
+                    Configure advanced options for WMPR request handling, caching, permissions, and integration settings.
+                  </p>
+                </SectionMessage>
+
+                <div style={{ marginTop: '24px' }}>
+                  <h3 style={{ color: '#172b4d', marginBottom: '16px' }}>Future Configuration Options</h3>
+                  <p style={{ color: '#5e6c84', lineHeight: '1.6' }}>
+                    Advanced settings will include:
+                  </p>
+                  <ul style={{ color: '#5e6c84', lineHeight: '1.6', marginLeft: '20px' }}>
+                    <li>Cache timeout and refresh intervals</li>
+                    <li>Permission-based filtering and access control</li>
+                    <li>Custom field mappings and display options</li>
+                    <li>Integration with external systems</li>
+                    <li>Custom CSS styling options</li>
+                    <li>API rate limiting and throttling</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </TabPanel>
+
+          {/* Help & Documentation Tab (Dummy) */}
+          <TabPanel>
+            <div style={tabPanelStyle}>
+              <div style={sectionStyle}>
+                <h2 style={sectionTitleStyle}>
+                  <span>📚</span>
+                  Help & Documentation
+                </h2>
+                
+                <SectionMessage appearance="success">
+                  <p>
+                    Find answers to common questions, setup guides, and troubleshooting information for WMPR Request configuration.
+                  </p>
+                </SectionMessage>
+
+                <div style={{ marginTop: '24px' }}>
+                  <h3 style={{ color: '#172b4d', marginBottom: '16px' }}>Quick Start Guide</h3>
+                  <div style={{ 
+                    background: '#fff', 
+                    padding: '20px', 
+                    borderRadius: '6px', 
+                    border: '1px solid #dfe1e6',
+                    marginBottom: '20px'
+                  }}>
+                    <h4 style={{ color: '#172b4d', marginBottom: '12px' }}>1. Configure JQL Query</h4>
+                    <p style={{ color: '#5e6c84', marginBottom: '0' }}>
+                      Set up a custom JQL query to filter which requests appear in your portal footer.
+                    </p>
+                  </div>
+                  
+                  <div style={{ 
+                    background: '#fff', 
+                    padding: '20px', 
+                    borderRadius: '6px', 
+                    border: '1px solid #dfe1e6',
+                    marginBottom: '20px'
+                  }}>
+                    <h4 style={{ color: '#172b4d', marginBottom: '12px' }}>2. Set Up Portal Buttons</h4>
+                    <p style={{ color: '#5e6c84', marginBottom: '0' }}>
+                      Configure action buttons that will appear above your WMPR requests table for quick access to common actions.
+                    </p>
+                  </div>
+
+                  <div style={{ 
+                    background: '#fff', 
+                    padding: '20px', 
+                    borderRadius: '6px', 
+                    border: '1px solid #dfe1e6'
+                  }}>
+                    <h4 style={{ color: '#172b4d', marginBottom: '12px' }}>3. Test Your Configuration</h4>
+                    <p style={{ color: '#5e6c84', marginBottom: '0' }}>
+                      Visit your Service Desk portal to see the WMPR requests section and verify your settings are working correctly.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </TabPanel>
+        </Tabs>
+
+        {/* Summary Section */}
+        <div style={{ 
+          margin: '40px 32px 32px', 
+          padding: '24px', 
+          backgroundColor: '#f4f5f7', 
+          borderRadius: '8px',
+          border: '1px solid #e1e5e9'
+        }}>
+          <h3 style={{ 
+            margin: '0 0 16px 0', 
+            fontSize: '16px', 
+            fontWeight: '600',
+            color: '#172b4d'
+          }}>
+            Current Configuration Summary
+          </h3>
+          
+          <div style={{ 
+            display: 'grid', 
+            gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', 
+            gap: '24px' 
+          }}>
+            <div>
+              <p style={{ margin: '8px 0', color: '#5e6c84' }}>
+                <strong style={{ color: '#172b4d' }}>Project:</strong> {settings.projectKey}
+              </p>
+              <p style={{ margin: '8px 0', color: '#5e6c84' }}>
+                <strong style={{ color: '#172b4d' }}>Custom JQL:</strong> {settings.useCustomJql ? 'Enabled' : 'Disabled'}
+              </p>
+              <p style={{ margin: '8px 0', color: '#5e6c84' }}>
+                <strong style={{ color: '#172b4d' }}>Active Query:</strong>
+              </p>
+              <code style={{ 
+                display: 'block', 
+                padding: '12px', 
+                backgroundColor: '#fff', 
+                border: '1px solid #dfe1e6', 
+                borderRadius: '4px',
+                fontSize: '12px',
+                marginTop: '6px',
+                wordBreak: 'break-all'
+              }}>
+                {settings.useCustomJql && settings.jql ? settings.jql : settings.defaultJql}
+              </code>
+            </div>
+            
+            <div>
+              <p style={{ margin: '8px 0 16px 0', color: '#172b4d', fontWeight: '600' }}>
+                Configured Buttons: {getButtonsTableData().filter(b => b.isConfigured).length} of 5
+              </p>
+              {getButtonsTableData().map((button) => (
+                <div key={button.buttonNumber} style={{ 
+                  margin: '6px 0', 
+                  fontSize: '12px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px'
                 }}>
-                  <h4 style={{ margin: '0 0 12px 0', fontSize: '14px', color: '#172b4d' }}>
-                    Button {num}
-                  </h4>
-                  
-                  <Field
-                    name={`button${num}Label`}
-                    defaultValue={settings[`button${num}Label` as keyof SettingsData] as string}
-                  >
-                    {({ fieldProps }) => (
-                      <div style={{ marginBottom: '12px' }}>
-                        <label style={{ display: 'block', marginBottom: '4px', fontSize: '12px', fontWeight: 'bold' }}>
-                          Button Label
-                        </label>
-                        <Textfield
-                          {...fieldProps}
-                          placeholder={`Button ${num} Label`}
-                        />
-                      </div>
-                    )}
-                  </Field>
-                  
-                  <Field
-                    name={`button${num}Url`}
-                    defaultValue={settings[`button${num}Url` as keyof SettingsData] as string}
-                  >
-                    {({ fieldProps }) => (
-                      <div>
-                        <label style={{ display: 'block', marginBottom: '4px', fontSize: '12px', fontWeight: 'bold' }}>
-                          Button URL
-                        </label>
-                        <Textfield
-                          {...fieldProps}
-                          placeholder={`https://example.com`}
-                        />
-                      </div>
-                    )}
-                  </Field>
+                  <span style={{
+                    display: 'inline-block',
+                    width: '16px',
+                    height: '16px',
+                    borderRadius: '50%',
+                    background: button.isConfigured ? '#36b37e' : '#dfe1e6',
+                    color: 'white',
+                    fontSize: '10px',
+                    lineHeight: '16px',
+                    textAlign: 'center',
+                    fontWeight: 'bold'
+                  }}>
+                    {button.buttonNumber}
+                  </span>
+                  <span style={{ color: button.isConfigured ? '#172b4d' : '#8993a4' }}>
+                    {button.isConfigured 
+                      ? `"${button.label}" → ${button.url.substring(0, 30)}${button.url.length > 30 ? '...' : ''}`
+                      : 'Not configured'
+                    }
+                  </span>
                 </div>
               ))}
             </div>
-
-            <FormFooter>
-              <ButtonGroup>
-                <Button 
-                  type="submit" 
-                  appearance="primary"
-                  isLoading={saving}
-                >
-                  Save Settings
-                </Button>
-                <Button 
-                  onClick={loadSettings}
-                  isDisabled={saving}
-                >
-                  Reset
-                </Button>
-              </ButtonGroup>
-            </FormFooter>
-          </form>
-        )}
-      </Form>
-
-      <div style={{ marginTop: '32px', padding: '16px', backgroundColor: '#f4f5f7', borderRadius: '3px' }}>
-        <h3 style={{ margin: '0 0 12px 0', fontSize: '14px', fontWeight: 'bold' }}>Current Configuration</h3>
-        <p style={{ margin: '4px 0' }}><strong>Project:</strong> {settings.projectKey}</p>
-        <p style={{ margin: '4px 0' }}><strong>Use Custom JQL:</strong> {settings.useCustomJql ? 'Yes' : 'No'}</p>
-        <p style={{ margin: '4px 0' }}><strong>Active JQL:</strong></p>
-        <code style={{ 
-          display: 'block', 
-          padding: '8px', 
-          backgroundColor: '#fff', 
-          border: '1px solid #dfe1e6', 
-          borderRadius: '3px',
-          fontSize: '12px',
-          marginTop: '4px'
-        }}>
-          {settings.useCustomJql && settings.jql ? settings.jql : settings.defaultJql}
-        </code>
-        
-        <h4 style={{ margin: '16px 0 8px 0', fontSize: '14px', fontWeight: 'bold' }}>Configured Buttons:</h4>
-        {[1, 2, 3, 4, 5].map((num) => {
-          const label = settings[`button${num}Label` as keyof SettingsData] as string;
-          const url = settings[`button${num}Url` as keyof SettingsData] as string;
-          return (
-            <div key={num} style={{ margin: '4px 0', fontSize: '12px' }}>
-              <strong>Button {num}:</strong> {
-                label && url 
-                  ? `"${label}" → ${url}` 
-                  : <span style={{ color: '#6B778C' }}>Not configured</span>
-              }
-            </div>
-          );
-        })}
+          </div>
+        </div>
       </div>
     </div>
   );

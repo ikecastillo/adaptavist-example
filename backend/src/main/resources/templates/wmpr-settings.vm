@@ -12,25 +12,281 @@
     $webResourceManager.requireResource("com.scriptrunnerhq.vendors-api.backend:wmpr-settings-resources")
     $webResourceManager.requireResource("com.atlassian.auiplugin:ajs")
     $webResourceManager.requireResource("com.atlassian.plugins.jquery:jquery")
+    
+    <style>
+        /* Enhanced layout styles for WMPR Settings */
+        .wmpr-settings-layout {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 24px;
+            background: #f4f5f7;
+            min-height: 100vh;
+        }
+        
+        .wmpr-settings-header {
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            margin-bottom: 24px;
+            overflow: hidden;
+        }
+        
+        .wmpr-settings-header .aui-page-header {
+            background: linear-gradient(135deg, #0052cc 0%, #0065ff 100%);
+            color: white;
+            margin: 0;
+            border: none;
+        }
+        
+        .wmpr-settings-header .aui-page-header-inner {
+            padding: 32px 40px;
+        }
+        
+        .wmpr-settings-header h1 {
+            color: white;
+            margin: 0 0 8px 0;
+            font-size: 28px;
+            font-weight: 600;
+        }
+        
+        .wmpr-settings-header .aui-page-header-description {
+            color: rgba(255, 255, 255, 0.9);
+            font-size: 16px;
+            margin: 0;
+            line-height: 1.5;
+        }
+        
+        .wmpr-settings-container {
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+        
+        .wmpr-settings-nav {
+            background: #f8f9fa;
+            border-bottom: 1px solid #e1e5e9;
+            padding: 20px 40px;
+        }
+        
+        .wmpr-nav-tabs {
+            display: flex;
+            gap: 24px;
+            margin: 0;
+            padding: 0;
+            list-style: none;
+        }
+        
+        .wmpr-nav-tab {
+            padding: 12px 20px;
+            background: #fff;
+            border: 1px solid #dfe1e6;
+            border-radius: 6px;
+            font-weight: 500;
+            color: #172b4d;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .wmpr-nav-tab:hover {
+            background: #f4f5f7;
+            border-color: #0052cc;
+        }
+        
+        .wmpr-nav-tab.active {
+            background: #0052cc;
+            color: white;
+            border-color: #0052cc;
+        }
+        
+        .wmpr-nav-tab-icon {
+            width: 16px;
+            height: 16px;
+            fill: currentColor;
+        }
+        
+        .wmpr-content-area {
+            padding: 40px;
+        }
+        
+        .wmpr-loading-placeholder {
+            text-align: center;
+            padding: 60px 40px;
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        }
+        
+        .wmpr-loading-spinner {
+            width: 48px;
+            height: 48px;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #0052cc;
+            border-radius: 50%;
+            animation: wmpr-spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+        
+        .wmpr-loading-text {
+            color: #5e6c84;
+            font-size: 16px;
+            font-weight: 500;
+            margin: 0;
+        }
+        
+        .wmpr-loading-subtext {
+            color: #8993a4;
+            font-size: 14px;
+            margin: 8px 0 0 0;
+        }
+        
+        @keyframes wmpr-spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        /* Feature cards layout */
+        .wmpr-feature-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+            margin-bottom: 32px;
+        }
+        
+        .wmpr-feature-card {
+            background: #f8f9fa;
+            border: 1px solid #e1e5e9;
+            border-radius: 8px;
+            padding: 24px;
+            text-align: center;
+        }
+        
+        .wmpr-feature-icon {
+            width: 48px;
+            height: 48px;
+            background: #0052cc;
+            border-radius: 50%;
+            margin: 0 auto 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .wmpr-feature-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #172b4d;
+            margin: 0 0 8px 0;
+        }
+        
+        .wmpr-feature-desc {
+            font-size: 14px;
+            color: #5e6c84;
+            margin: 0;
+            line-height: 1.4;
+        }
+        
+        /* Responsive design */
+        @media (max-width: 768px) {
+            .wmpr-settings-layout {
+                padding: 16px;
+            }
+            
+            .wmpr-settings-header .aui-page-header-inner {
+                padding: 24px 20px;
+            }
+            
+            .wmpr-settings-header h1 {
+                font-size: 24px;
+            }
+            
+            .wmpr-feature-grid {
+                grid-template-columns: 1fr;
+                gap: 16px;
+            }
+            
+            .wmpr-nav-tabs {
+                flex-direction: column;
+                gap: 12px;
+            }
+            
+            .wmpr-content-area {
+                padding: 24px 20px;
+            }
+        }
+    </style>
 </head>
 <body>
-    <div id="wmpr-settings-container" class="project-config-content">
-        <header class="aui-page-header">
-            <div class="aui-page-header-inner">
-                <div class="aui-page-header-main">
-                    <h1>WMPR Requests Settings</h1>
-                    <p class="aui-page-header-description">
-                        Configure the JQL query used to fetch WMPR requests for display in the Service Desk portal.
-                    </p>
+    <div class="wmpr-settings-layout">
+        <!-- Enhanced Header Section -->
+        <div class="wmpr-settings-header">
+            <header class="aui-page-header">
+                <div class="aui-page-header-inner">
+                    <div class="aui-page-header-main">
+                        <h1>WMPR Requests Settings</h1>
+                        <p class="aui-page-header-description">
+                            Configure JQL queries and service desk portal buttons for WMPR request display. 
+                            Customize how your team accesses and views work management process requests.
+                        </p>
+                    </div>
                 </div>
+            </header>
+        </div>
+
+        <!-- Feature Overview Cards -->
+        <div class="wmpr-feature-grid">
+            <div class="wmpr-feature-card">
+                <div class="wmpr-feature-icon">
+                    <svg class="wmpr-feature-icon-svg" width="24" height="24" viewBox="0 0 24 24" fill="white">
+                        <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+                    </svg>
+                </div>
+                <h3 class="wmpr-feature-title">JQL Configuration</h3>
+                <p class="wmpr-feature-desc">Define custom JQL queries to control which WMPR requests appear in the service desk portal</p>
             </div>
-        </header>
-        
-        <!-- Loading state while React component initializes -->
-        <div class="wmpr-loading-placeholder">
-            <div style="text-align: center; padding: 40px;">
-                <aui-spinner size="medium"></aui-spinner>
-                <p>Initializing WMPR Settings...</p>
+            
+            <div class="wmpr-feature-card">
+                <div class="wmpr-feature-icon">
+                    <svg class="wmpr-feature-icon-svg" width="24" height="24" viewBox="0 0 24 24" fill="white">
+                        <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
+                    </svg>
+                </div>
+                <h3 class="wmpr-feature-title">Action Buttons</h3>
+                <p class="wmpr-feature-desc">Configure up to 5 custom buttons for quick actions above the WMPR requests table</p>
+            </div>
+        </div>
+
+        <!-- Main Settings Container -->
+        <div class="wmpr-settings-container">
+            <!-- Navigation Tabs -->
+            <div class="wmpr-settings-nav">
+                <ul class="wmpr-nav-tabs">
+                    <li class="wmpr-nav-tab active">
+                        <svg class="wmpr-nav-tab-icon" viewBox="0 0 24 24">
+                            <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+                        </svg>
+                        Query Configuration
+                    </li>
+                    <li class="wmpr-nav-tab">
+                        <svg class="wmpr-nav-tab-icon" viewBox="0 0 24 24">
+                            <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
+                        </svg>
+                        Portal Buttons
+                    </li>
+                </ul>
+            </div>
+
+            <!-- Content Area -->
+            <div class="wmpr-content-area">
+                <div id="wmpr-settings-container" class="project-config-content">
+                    <!-- Enhanced Loading State -->
+                    <div class="wmpr-loading-placeholder">
+                        <div class="wmpr-loading-spinner"></div>
+                        <p class="wmpr-loading-text">Initializing WMPR Settings</p>
+                        <p class="wmpr-loading-subtext">Loading configuration interface...</p>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -57,6 +313,22 @@
             console.log('WMPR Settings loaded for project:', window.projectKey);
             console.log('Context path:', window.contextPath);
             
+            // Enhanced tab navigation functionality
+            function initializeTabNavigation() {
+                const tabs = document.querySelectorAll('.wmpr-nav-tab');
+                tabs.forEach((tab, index) => {
+                    tab.addEventListener('click', function() {
+                        // Remove active class from all tabs
+                        tabs.forEach(t => t.classList.remove('active'));
+                        // Add active class to clicked tab
+                        this.classList.add('active');
+                        
+                        // Could be extended to show/hide different sections
+                        console.log('Tab switched to:', this.textContent.trim());
+                    });
+                });
+            }
+            
             // Initialize WMPR Settings component
             function initializeWMPRSettings() {
                 console.log('Initializing WMPR Settings in project admin context...');
@@ -71,6 +343,9 @@
                 if (typeof window.WMPRSettings !== 'undefined' && window.WMPRSettings.mount) {
                     console.log('Mounting WMPR Settings component');
                     window.WMPRSettings.mount();
+                    
+                    // Initialize tab navigation after component mounts
+                    setTimeout(initializeTabNavigation, 500);
                 } else {
                     console.log('WMPRSettings not ready, retrying...');
                     setTimeout(initializeWMPRSettings, 1000);

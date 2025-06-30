@@ -83,11 +83,12 @@ const WMPRSettings: React.FC = () => {
     try {
       setLoading(true);
       
-      // Include projectKey parameter in the API call
+      // Include projectKey parameter in the API call - always send it for consistency
       const url = new URL(`${getBaseUrl()}/rest/wmpr-requests/1.0/settings`);
-      if (projectKey && projectKey !== 'global') {
-        url.searchParams.append('projectKey', projectKey);
-      }
+      url.searchParams.append('projectKey', projectKey);
+      
+      console.log('Loading settings for projectKey:', projectKey);
+      console.log('GET URL:', url.toString());
       
       const response = await fetch(url.toString(), {
         method: 'GET',
@@ -167,6 +168,9 @@ const WMPRSettings: React.FC = () => {
         button5Label: data.button5Label || '',
         button5Url: data.button5Url || ''
       };
+
+      console.log('Saving settings for projectKey:', projectKey);
+      console.log('POST payload:', JSON.stringify(payload, null, 2));
 
       const response = await fetch(`${getBaseUrl()}/rest/wmpr-requests/1.0/settings`, {
         method: 'POST',

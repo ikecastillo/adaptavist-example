@@ -42,6 +42,25 @@ const WMPRPortalFooter: React.FC = () => {
     fetchButtonConfigs();
   }, []);
 
+  const getProjectKeyFromContext = () => {
+    // Try to get project key from various sources in Service Desk portal context
+    if ((window as any).projectKey) {
+      return (window as any).projectKey;
+    }
+    
+    // Try to extract from URL - Service Desk portal URLs often have project info
+    const pathname = window.location.pathname;
+    const match = pathname.match(/\/portal\/(\d+)/);
+    if (match) {
+      // This would be the portal ID, but we need to map to project key
+      // For now, return 'global' and let backend handle default project mapping
+      console.log('Portal Footer - Detected portal ID:', match[1]);
+    }
+    
+    // Fallback to global
+    return 'global';
+  };
+
   const getBaseUrl = () => {
     // Get the base URL for API calls
     let baseUrl = (window as any).location.origin;
@@ -130,9 +149,15 @@ const WMPRPortalFooter: React.FC = () => {
   const fetchButtonConfigs = async () => {
     try {
       const baseUrl = getBaseUrl();
-      const apiUrl = `${baseUrl}/rest/wmpr-requests/1.0/settings`;
+      // Try to get project key from URL or use global
+      const projectKey = getProjectKeyFromContext() || 'global';
+      const url = new URL(`${baseUrl}/rest/wmpr-requests/1.0/settings`);
+      url.searchParams.append('projectKey', projectKey);
       
-      const response = await fetch(apiUrl, {
+      console.log('Portal Footer - Loading button configs for projectKey:', projectKey);
+      console.log('Portal Footer - GET URL:', url.toString());
+      
+      const response = await fetch(url.toString(), {
         method: 'GET',
         headers: {
           'Accept': 'application/json',

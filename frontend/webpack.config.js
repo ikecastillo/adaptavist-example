@@ -1,5 +1,6 @@
 const path = require('path');
 const WrmPlugin = require('atlassian-webresource-webpack-plugin');
+const TerserPlugin = require('terser-webpack-plugin');
 
 const xmlOutPath = path.resolve(
     '..', 'backend', 'src', 'main', 'resources', 'META-INF', 'plugin-descriptors', 'wr-defs.xml'
@@ -42,6 +43,19 @@ module.exports = (_, { mode }) => {
                 }
             }),
         ],
+        optimization: {
+            minimize: mode === 'production',
+            minimizer: [
+                new TerserPlugin({
+                    terserOptions: {
+                        compress: {
+                            drop_console: mode === 'production',
+                            drop_debugger: mode === 'production'
+                        }
+                    }
+                })
+            ]
+        },
         output: {
             filename: 'bundled.[name].js',
             path: path.resolve("../backend/src/main/resources/frontend")

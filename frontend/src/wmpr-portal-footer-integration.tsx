@@ -1,6 +1,6 @@
 import React from 'react';
 import ReactDOM from 'react-dom';
-import WMPRPortalFooter from './wmpr-portal-footer';
+import PortalFooter from './wmpr-portal-footer';
 
 // Create a unique namespace to avoid conflicts
 (window as any).WMPRPortalFooter = (window as any).WMPRPortalFooter || {};
@@ -77,7 +77,7 @@ function mountWMPRPortalFooter() {
             }
             
             // Render the React component using the legacy API
-            ReactDOM.render(React.createElement(WMPRPortalFooter), wmprContainer);
+            ReactDOM.render(React.createElement(PortalFooter), wmprContainer);
             
             (window as any).WMPRPortalFooter.mounted = true;
             console.log('WMPR Portal Footer component mounted successfully in Service Desk portal');

@@ -3,6 +3,8 @@ import DynamicTable from '@atlaskit/dynamic-table';
 import Lozenge from '@atlaskit/lozenge';
 import Spinner from '@atlaskit/spinner';
 import Button from '@atlaskit/button';
+import { getCurrentProjectKey, getBaseUrl } from './utils/projectKey';
+import { logger } from './utils/logger';
 
 interface ServiceDeskRequest {
   key: string;
@@ -31,84 +33,33 @@ interface ButtonConfig {
   url: string;
 }
 
-const WMPRPortalFooter: React.FC = () => {
+const PortalFooter: React.FC = () => {
   const [requests, setRequests] = useState<ServiceDeskRequest[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [buttonConfigs, setButtonConfigs] = useState<ButtonConfig[]>([]);
+  const [projectKey, setProjectKey] = useState<string>('global');
 
   useEffect(() => {
-    fetchWMPRRequests();
-    fetchButtonConfigs();
+    initializeComponent();
   }, []);
 
-  const getProjectKeyFromContext = () => {
-    // Try to get project key from various sources in Service Desk portal context
-    if ((window as any).projectKey) {
-      return (window as any).projectKey;
+  const initializeComponent = async () => {
+    try {
+      const detectedProjectKey = await getCurrentProjectKey();
+      setProjectKey(detectedProjectKey);
+      logger.info('Portal Footer initialized for project:', detectedProjectKey);
+      
+      await Promise.all([
+        fetchWMPRRequests(),
+        fetchButtonConfigs()
+      ]);
+    } catch (error) {
+      logger.error('Error initializing Portal Footer:', error);
     }
-    
-    // Try to extract from URL - Service Desk portal URLs often have project info
-    const pathname = window.location.pathname;
-    const match = pathname.match(/\/portal\/(\d+)/);
-    if (match) {
-      // This would be the portal ID, but we need to map to project key
-      // For now, return 'global' and let backend handle default project mapping
-      console.log('Portal Footer - Detected portal ID:', match[1]);
-    }
-    
-    // Fallback to global
-    return 'global';
   };
 
-  const getBaseUrl = () => {
-    // Get the base URL for API calls
-    let baseUrl = (window as any).location.origin;
-    let contextPath = '';
-    
-    // Try to get context path from AJS (most reliable method)
-    if ((window as any).AJS?.contextPath) {
-      contextPath = (window as any).AJS.contextPath();
-    } else if ((window as any).contextPath) {
-      contextPath = (window as any).contextPath;
-    } else {
-      // Fallback: detect context path from URL
-      const pathname = window.location.pathname;
-      const parts = pathname.split('/').filter(part => part.length > 0);
-      
-      // For URLs like jira.samsungaustin.com/servicedesk/customer/portal/1
-      // We don't want any context path - API is at root level
-      if (parts.length > 0) {
-        const firstPart = parts[0];
-        
-        // If first part is 'servicedesk', this is root-level JIRA (no context path)
-        if (firstPart === 'servicedesk') {
-          contextPath = '';
-        } 
-        // If first part is 'jira', this is context-path JIRA (like localhost:2990/jira)
-        else if (firstPart === 'jira') {
-          contextPath = '/jira';
-        }
-        // For other first parts, only use if they're not servicedesk-related
-        else if (!firstPart.includes('servicedesk') && !firstPart.includes('customer') && !firstPart.includes('portal')) {
-          contextPath = '/' + firstPart;
-        }
-        // Otherwise assume root context (no context path)
-      }
-    }
-    
-    // Clean up context path
-    if (contextPath && !contextPath.startsWith('/')) {
-      contextPath = '/' + contextPath;
-    }
-    
-    const fullUrl = `${baseUrl}${contextPath}`;
-    console.log('WMPR Portal Footer - API Base URL:', fullUrl);
-    console.log('WMPR Portal Footer - Current pathname:', window.location.pathname);
-    console.log('WMPR Portal Footer - Detected context path:', contextPath || '(none - root level)');
-    console.log('WMPR Portal Footer - Window origin:', baseUrl);
-    return fullUrl;
-  };
+
 
   const fetchWMPRRequests = async () => {
     try {
@@ -116,9 +67,9 @@ const WMPRPortalFooter: React.FC = () => {
       setError(null);
       
       const baseUrl = getBaseUrl();
-      const apiUrl = `${baseUrl}/rest/wmpr-requests/1.0/recent`;
+      const apiUrl = `${baseUrl}/rest/portal-requests/1.0/recent`;
       
-      console.log('Fetching WMPR requests from:', apiUrl);
+      logger.debug('Fetching requests from:', apiUrl);
       
       const response = await fetch(apiUrl, {
         method: 'GET',
@@ -136,9 +87,9 @@ const WMPRPortalFooter: React.FC = () => {
 
       const data: ApiResponse = await response.json();
       setRequests(data.data || []);
-      console.log('WMPR requests loaded:', data.data?.length || 0);
+      logger.debug('Requests loaded:', data.data?.length || 0);
     } catch (err) {
-      console.error('Error fetching WMPR requests:', err);
+      logger.error('Error fetching requests:', err);
       const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred';
       setError(errorMessage);
     } finally {
@@ -149,13 +100,11 @@ const WMPRPortalFooter: React.FC = () => {
   const fetchButtonConfigs = async () => {
     try {
       const baseUrl = getBaseUrl();
-      // Try to get project key from URL or use global
-      const projectKey = getProjectKeyFromContext() || 'global';
-      const url = new URL(`${baseUrl}/rest/wmpr-requests/1.0/settings`);
+      const url = new URL(`${baseUrl}/rest/portal-requests/1.0/settings`);
       url.searchParams.append('projectKey', projectKey);
       
-      console.log('Portal Footer - Loading button configs for projectKey:', projectKey);
-      console.log('Portal Footer - GET URL:', url.toString());
+      logger.debug('Loading button configs for projectKey:', projectKey);
+      logger.debug('GET URL:', url.toString());
       
       const response = await fetch(url.toString(), {
         method: 'GET',
@@ -180,7 +129,7 @@ const WMPRPortalFooter: React.FC = () => {
         setButtonConfigs(buttons);
       }
     } catch (error) {
-      console.error('Error fetching button configs:', error);
+      logger.error('Error fetching button configs:', error);
       // Don't show error for button configs, just silently fail
     }
   };
@@ -293,7 +242,7 @@ const WMPRPortalFooter: React.FC = () => {
         margin: '10px 0'
       }}>
         <Spinner size="medium" />
-        <p style={{ marginTop: '10px', color: '#5e6c84' }}>Loading WMPR requests...</p>
+        <p style={{ marginTop: '10px', color: '#5e6c84' }}>Loading requests...</p>
       </div>
     );
   }
@@ -309,13 +258,13 @@ const WMPRPortalFooter: React.FC = () => {
         border: '1px solid #ff5630'
       }}>
         <p style={{ color: '#bf2600', margin: '0 0 10px 0' }}>
-          Error loading WMPR requests: {error}
+          Error loading requests: {error}
         </p>
         <p style={{ color: '#5e6c84', fontSize: '12px', margin: '0 0 10px 0' }}>
-          API URL: {getBaseUrl()}/rest/wmpr-requests/1.0/recent
+          API URL: {getBaseUrl()}/rest/portal-requests/1.0/recent
         </p>
         <button 
-          onClick={fetchWMPRRequests}
+          onClick={() => fetchWMPRRequests()}
           style={{
             marginTop: '10px',
             padding: '8px 16px',
@@ -350,7 +299,7 @@ const WMPRPortalFooter: React.FC = () => {
           fontSize: '16px',
           fontWeight: '600'
         }}>
-          Recent WMPR Requests
+          Recent Requests
         </h3>
       </div>
       {buttonConfigs.length > 0 && (
@@ -384,7 +333,7 @@ const WMPRPortalFooter: React.FC = () => {
             textAlign: 'center',
             color: '#5e6c84'
           }}>
-            No WMPR requests found.
+            No requests found.
           </div>
         ) : (
           <DynamicTable
@@ -401,4 +350,4 @@ const WMPRPortalFooter: React.FC = () => {
   );
 };
 
-export default WMPRPortalFooter; 
+export default PortalFooter; 

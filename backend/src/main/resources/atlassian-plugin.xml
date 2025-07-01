@@ -8,9 +8,9 @@
   </plugin-info>
   <resource type="i18n" name="i18n" location="jira-react-atlaskit"/>
 
-  <!-- WMPR Requests REST API -->
-  <rest name="WMPR Requests REST" key="wmpr-requests-rest" path="/wmpr-requests" version="1.0">
-    <description>REST API for WMPR requests data and settings</description>
+  <!-- Portal Requests REST API -->
+  <rest name="Portal Requests REST" key="portal-requests-rest" path="/portal-requests" version="1.0">
+    <description>REST API for portal requests data and settings</description>
     <package>com.scriptrunnerhq.rest</package>
   </rest>
 

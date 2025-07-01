@@ -48,7 +48,7 @@ const WMPRSettings: React.FC = () => {
     projectKey: projectKey,
     jql: '',
     useCustomJql: false,
-    defaultJql: 'project = WMPR ORDER BY created DESC',
+    defaultJql: 'project = DEMO ORDER BY created DESC',
     button1Label: '',
     button1Url: '',
     button2Label: '',
@@ -84,7 +84,7 @@ const WMPRSettings: React.FC = () => {
       setLoading(true);
       
       // Include projectKey parameter in the API call - always send it for consistency
-      const url = new URL(`${getBaseUrl()}/rest/wmpr-requests/1.0/settings`);
+      const url = new URL(`${getBaseUrl()}/rest/portal-requests/1.0/settings`);
       url.searchParams.append('projectKey', projectKey);
       
       console.log('Loading settings for projectKey:', projectKey);
@@ -121,7 +121,7 @@ const WMPRSettings: React.FC = () => {
 
     try {
       setValidating(true);
-      const response = await fetch(`${getBaseUrl()}/rest/wmpr-requests/1.0/settings/validate-jql`, {
+      const response = await fetch(`${getBaseUrl()}/rest/portal-requests/1.0/settings/validate-jql`, {
         method: 'POST',
         headers: {
           'Accept': 'application/json',
@@ -172,7 +172,7 @@ const WMPRSettings: React.FC = () => {
       console.log('Saving settings for projectKey:', projectKey);
       console.log('POST payload:', JSON.stringify(payload, null, 2));
 
-      const response = await fetch(`${getBaseUrl()}/rest/wmpr-requests/1.0/settings`, {
+      const response = await fetch(`${getBaseUrl()}/rest/portal-requests/1.0/settings`, {
         method: 'POST',
         headers: {
           'Accept': 'application/json',

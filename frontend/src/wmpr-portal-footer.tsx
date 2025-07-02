@@ -47,12 +47,15 @@ const PortalFooter: React.FC = () => {
 
   const initializeComponent = async () => {
     try {
-      // Get detailed project key information for debugging
+      // Get project key from admin settings
+      const detectedProjectKey = await getCurrentProjectKey();
+      setProjectKey(detectedProjectKey);
+      
+      // Get debug info for troubleshooting
       const details = await getCurrentProjectKeyWithDetails();
       setDebugInfo(details);
-      setProjectKey(details.projectKey);
       
-      logger.info('Portal Footer initialized with details:', details);
+      logger.info('Portal Footer initialized for project:', detectedProjectKey);
       
       await Promise.all([
         fetchWMPRRequests(),
@@ -72,12 +75,11 @@ const PortalFooter: React.FC = () => {
       const baseUrl = getBaseUrl();
       const apiUrl = `${baseUrl}/rest/portal-requests/1.0/recent`;
       
-      // Add project key as query parameter for better backend handling
+      // Add project key as query parameter
       const url = new URL(apiUrl);
       url.searchParams.append('projectKey', projectKey);
       
       logger.debug('Fetching requests from:', url.toString());
-      logger.debug('Base URL:', baseUrl);
       logger.debug('Project Key:', projectKey);
       
       const response = await fetch(url.toString(), {
@@ -118,7 +120,6 @@ const PortalFooter: React.FC = () => {
       url.searchParams.append('projectKey', projectKey);
       
       logger.debug('Loading button configs for projectKey:', projectKey);
-      logger.debug('GET URL:', url.toString());
       
       const response = await fetch(url.toString(), {
         method: 'GET',

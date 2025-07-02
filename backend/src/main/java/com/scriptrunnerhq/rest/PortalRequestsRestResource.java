@@ -83,7 +83,7 @@ public class PortalRequestsRestResource {
             if (!parseResult.isValid()) {
                 log.warn("[{}] Configured JQL invalid, trying fallback", requestId);
                 // Fallback to a more generic JQL if configured one fails
-                String fallbackProjectKey = (projectKey != null && !projectKey.equals("global")) ? projectKey : "DEMO";
+                String fallbackProjectKey = (projectKey != null && !projectKey.equals("global")) ? projectKey : "WMPR";
                 jql = String.format(DEFAULT_JQL_TEMPLATE, fallbackProjectKey);
                 parseResult = searchService.parseQuery(user, jql);
                 log.debug("[{}] Fallback JQL: {}", requestId, jql);
@@ -175,12 +175,12 @@ public class PortalRequestsRestResource {
                 return configuredJql;
             } else {
                 log.debug("Using default JQL for project {}", projectKey);
-                String defaultProjectKey = (projectKey != null && !projectKey.equals("global")) ? projectKey : "DEMO";
+                String defaultProjectKey = (projectKey != null && !projectKey.equals("global")) ? projectKey : "WMPR";
                 return String.format(DEFAULT_JQL_TEMPLATE, defaultProjectKey);
             }
         } catch (Exception e) {
             log.error("Error loading JQL settings for project: {}", e.getMessage());
-            String defaultProjectKey = (projectKey != null && !projectKey.equals("global")) ? projectKey : "DEMO";
+            String defaultProjectKey = (projectKey != null && !projectKey.equals("global")) ? projectKey : "WMPR";
             return String.format(DEFAULT_JQL_TEMPLATE, defaultProjectKey);
         }
     }

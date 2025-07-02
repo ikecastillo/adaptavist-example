@@ -79,7 +79,7 @@ public class PortalSettingsRestResource {
             }
             
             response.put("projectKey", settingsProjectKey);
-            String defaultProjectKey = (settingsProjectKey != null && !settingsProjectKey.equals("global")) ? settingsProjectKey : "DEMO";
+            String defaultProjectKey = (settingsProjectKey != null && !settingsProjectKey.equals("global")) ? settingsProjectKey : "WMPR";
             String defaultJql = String.format(DEFAULT_JQL_TEMPLATE, defaultProjectKey);
             response.put("jql", jql != null ? jql : defaultJql);
             response.put("useCustomJql", useCustomJql);

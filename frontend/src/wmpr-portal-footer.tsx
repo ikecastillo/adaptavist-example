@@ -3,7 +3,7 @@ import DynamicTable from '@atlaskit/dynamic-table';
 import Lozenge from '@atlaskit/lozenge';
 import Spinner from '@atlaskit/spinner';
 import Button from '@atlaskit/button';
-import { getCurrentProjectKey, getBaseUrl } from './utils/projectKey';
+import { getCurrentProjectKey, getBaseUrl, getCurrentProjectKeyWithDetails } from './utils/projectKey';
 import { logger } from './utils/logger';
 
 interface ServiceDeskRequest {
@@ -39,6 +39,7 @@ const PortalFooter: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [buttonConfigs, setButtonConfigs] = useState<ButtonConfig[]>([]);
   const [projectKey, setProjectKey] = useState<string>('global');
+  const [debugInfo, setDebugInfo] = useState<any>(null);
 
   useEffect(() => {
     initializeComponent();
@@ -46,9 +47,12 @@ const PortalFooter: React.FC = () => {
 
   const initializeComponent = async () => {
     try {
-      const detectedProjectKey = await getCurrentProjectKey();
-      setProjectKey(detectedProjectKey);
-      logger.info('Portal Footer initialized for project:', detectedProjectKey);
+      // Get detailed project key information for debugging
+      const details = await getCurrentProjectKeyWithDetails();
+      setDebugInfo(details);
+      setProjectKey(details.projectKey);
+      
+      logger.info('Portal Footer initialized with details:', details);
       
       await Promise.all([
         fetchWMPRRequests(),
@@ -56,10 +60,9 @@ const PortalFooter: React.FC = () => {
       ]);
     } catch (error) {
       logger.error('Error initializing Portal Footer:', error);
+      setError(`Initialization error: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   };
-
-
 
   const fetchWMPRRequests = async () => {
     try {
@@ -69,9 +72,15 @@ const PortalFooter: React.FC = () => {
       const baseUrl = getBaseUrl();
       const apiUrl = `${baseUrl}/rest/portal-requests/1.0/recent`;
       
-      logger.debug('Fetching requests from:', apiUrl);
+      // Add project key as query parameter for better backend handling
+      const url = new URL(apiUrl);
+      url.searchParams.append('projectKey', projectKey);
       
-      const response = await fetch(apiUrl, {
+      logger.debug('Fetching requests from:', url.toString());
+      logger.debug('Base URL:', baseUrl);
+      logger.debug('Project Key:', projectKey);
+      
+      const response = await fetch(url.toString(), {
         method: 'GET',
         headers: {
           'Accept': 'application/json',
@@ -88,6 +97,11 @@ const PortalFooter: React.FC = () => {
       const data: ApiResponse = await response.json();
       setRequests(data.data || []);
       logger.debug('Requests loaded:', data.data?.length || 0);
+      
+      // Log diagnostics if available
+      if (data.diagnostics) {
+        logger.debug('API Diagnostics:', data.diagnostics);
+      }
     } catch (err) {
       logger.error('Error fetching requests:', err);
       const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred';
@@ -127,6 +141,9 @@ const PortalFooter: React.FC = () => {
           }
         }
         setButtonConfigs(buttons);
+        logger.debug('Button configs loaded:', buttons.length);
+      } else {
+        logger.warn('Failed to load button configs:', response.status);
       }
     } catch (error) {
       logger.error('Error fetching button configs:', error);
@@ -159,193 +176,182 @@ const PortalFooter: React.FC = () => {
     }
   };
 
-  const head = {
+  // Create table data
+  const createTableData = () => {
+    return requests.map((request, index) => ({
+      key: request.key,
+      cells: [
+        {
+          key: 'key',
+          content: (
+            <a 
+              href={`${getBaseUrl()}/browse/${request.key}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{ color: '#0052cc', textDecoration: 'none' }}
+            >
+              {request.key}
+            </a>
+          ),
+        },
+        {
+          key: 'summary',
+          content: request.summary,
+        },
+        {
+          key: 'reporter',
+          content: request.reporter,
+        },
+        {
+          key: 'created',
+          content: formatDate(request.created),
+        },
+        {
+          key: 'status',
+          content: (
+            <Lozenge appearance={getStatusLozengeAppearance(request.statusCategory)}>
+              {request.status}
+            </Lozenge>
+          ),
+        },
+      ],
+    }));
+  };
+
+  const tableHead = {
     cells: [
       {
         key: 'key',
-        content: 'Issue Key',
+        content: 'Key',
         isSortable: false,
+        width: 15,
       },
       {
         key: 'summary',
         content: 'Summary',
         isSortable: false,
+        width: 40,
       },
       {
         key: 'reporter',
         content: 'Reporter',
         isSortable: false,
-      },
-      {
-        key: 'status',
-        content: 'Status',
-        isSortable: false,
+        width: 15,
       },
       {
         key: 'created',
         content: 'Created',
         isSortable: false,
+        width: 15,
+      },
+      {
+        key: 'status',
+        content: 'Status',
+        isSortable: false,
+        width: 15,
       },
     ],
   };
 
-  const rows = requests.map((request, index) => ({
-    key: `row-${index}`,
-    cells: [
-      {
-        key: 'key',
-        content: (
-          <a 
-            href={`${getBaseUrl()}/browse/${request.key}`} 
-            target="_blank" 
-            rel="noopener noreferrer"
-            style={{ color: '#0052CC', textDecoration: 'none' }}
-          >
-            {request.key}
-          </a>
-        ),
-      },
-      {
-        key: 'summary',
-        content: (
-          <span title={request.summary}>
-            {request.summary.length > 50 ? `${request.summary.substring(0, 50)}...` : request.summary}
-          </span>
-        ),
-      },
-      {
-        key: 'reporter',
-        content: request.reporter,
-      },
-      {
-        key: 'status',
-        content: (
-          <Lozenge appearance={getStatusLozengeAppearance(request.statusCategory)}>
-            {request.status}
-          </Lozenge>
-        ),
-      },
-      {
-        key: 'created',
-        content: formatDate(request.created),
-      },
-    ],
-  }));
+  // Debug information component
+  const DebugInfo = () => {
+    if (!debugInfo) return null;
+    
+    return (
+      <div style={{ 
+        fontSize: '12px', 
+        color: '#6b778c', 
+        marginBottom: '10px',
+        padding: '8px',
+        backgroundColor: '#f4f5f7',
+        borderRadius: '3px',
+        border: '1px solid #dfe1e6'
+      }}>
+        <strong>Debug Info:</strong> Project: {debugInfo.projectKey} | 
+        Source: {debugInfo.source} | 
+        Confidence: {debugInfo.confidence} | 
+        Base URL: {debugInfo.baseUrl}
+      </div>
+    );
+  };
 
   if (loading) {
     return (
-      <div style={{ 
-        padding: '20px', 
-        textAlign: 'center',
-        background: '#f4f5f7',
-        borderRadius: '3px',
-        margin: '10px 0'
-      }}>
+      <div style={{ padding: '20px', textAlign: 'center' }}>
+        <DebugInfo />
         <Spinner size="medium" />
-        <p style={{ marginTop: '10px', color: '#5e6c84' }}>Loading requests...</p>
+        <p style={{ marginTop: '10px', color: '#6b778c' }}>Loading recent requests...</p>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div style={{ 
-        padding: '20px', 
-        textAlign: 'center',
-        background: '#ffebe6',
-        borderRadius: '3px',
-        margin: '10px 0',
-        border: '1px solid #ff5630'
-      }}>
-        <p style={{ color: '#bf2600', margin: '0 0 10px 0' }}>
-          Error loading requests: {error}
-        </p>
-        <p style={{ color: '#5e6c84', fontSize: '12px', margin: '0 0 10px 0' }}>
-          API URL: {getBaseUrl()}/rest/portal-requests/1.0/recent
-        </p>
-        <button 
-          onClick={() => fetchWMPRRequests()}
-          style={{
-            marginTop: '10px',
-            padding: '8px 16px',
-            background: '#0052CC',
-            color: 'white',
-            border: 'none',
-            borderRadius: '3px',
-            cursor: 'pointer'
-          }}
+      <div style={{ padding: '20px', textAlign: 'center' }}>
+        <DebugInfo />
+        <div style={{ color: '#de350b', marginBottom: '10px' }}>
+          <strong>Error:</strong> {error}
+        </div>
+        <Button 
+          appearance="primary" 
+          onClick={fetchWMPRRequests}
+          style={{ marginRight: '10px' }}
         >
           Retry
-        </button>
+        </Button>
+        <Button 
+          appearance="subtle" 
+          onClick={() => setError(null)}
+        >
+          Dismiss
+        </Button>
       </div>
     );
   }
 
   return (
-    <div style={{ 
-      margin: '20px 0',
-      background: '#fff',
-      borderRadius: '3px',
-      border: '1px solid #dfe1e6'
-    }}>
-      <div style={{ 
-        padding: '16px',
-        borderBottom: '1px solid #dfe1e6',
-        background: '#f4f5f7'
-      }}>
-        <h3 style={{ 
-          margin: '0',
-          color: '#172b4d',
-          fontSize: '16px',
-          fontWeight: '600'
-        }}>
-          Recent Requests
+    <div style={{ padding: '20px' }}>
+      <DebugInfo />
+      
+      <div style={{ marginBottom: '20px' }}>
+        <h3 style={{ margin: '0 0 10px 0', color: '#172b4d' }}>
+          Recent Requests ({requests.length})
         </h3>
+        {requests.length === 0 && (
+          <p style={{ color: '#6b778c', fontStyle: 'italic' }}>
+            No recent requests found for project: {projectKey}
+          </p>
+        )}
       </div>
+
+      {requests.length > 0 && (
+        <DynamicTable
+          head={tableHead}
+          rows={createTableData()}
+          rowsPerPage={5}
+          defaultPage={1}
+          isFixedSize
+          defaultSortKey="created"
+          defaultSortOrder="DESC"
+        />
+      )}
+
       {buttonConfigs.length > 0 && (
-        <div style={{ 
-          padding: '16px',
-          borderBottom: '1px solid #dfe1e6',
-          background: '#fafbfc'
-        }}>
-          <div style={{ 
-            display: 'flex',
-            gap: '8px',
-            flexWrap: 'wrap',
-            justifyContent: 'center'
-          }}>
-            {buttonConfigs.map((config, index) => (
+        <div style={{ marginTop: '20px', paddingTop: '20px', borderTop: '1px solid #dfe1e6' }}>
+          <h4 style={{ margin: '0 0 10px 0', color: '#172b4d' }}>Quick Actions</h4>
+          <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+            {buttonConfigs.map((button, index) => (
               <Button
                 key={index}
                 appearance="primary"
-                onClick={() => window.open(config.url, '_blank', 'noopener,noreferrer')}
+                onClick={() => window.open(button.url, '_blank')}
               >
-                {config.label}
+                {button.label}
               </Button>
             ))}
           </div>
         </div>
       )}
-      <div style={{ padding: '0' }}>
-        {requests.length === 0 ? (
-          <div style={{ 
-            padding: '40px 20px',
-            textAlign: 'center',
-            color: '#5e6c84'
-          }}>
-            No requests found.
-          </div>
-        ) : (
-          <DynamicTable
-            head={head}
-            rows={rows}
-            rowsPerPage={10}
-            defaultPage={1}
-            isLoading={false}
-            isFixedSize
-          />
-        )}
-      </div>
     </div>
   );
 };

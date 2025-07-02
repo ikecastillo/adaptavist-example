@@ -9,6 +9,7 @@ import DynamicTable from '@atlaskit/dynamic-table';
 import Tabs, { Tab, TabList, TabPanel } from '@atlaskit/tabs';
 import { type SelectedType } from '@atlaskit/tabs/types';
 import VisuallyHidden from '@atlaskit/visually-hidden';
+import { getBaseUrl } from './utils/projectKey';
 
 interface SettingsData {
   projectKey: string;
@@ -72,12 +73,6 @@ const WMPRSettings: React.FC = () => {
   useEffect(() => {
     loadSettings();
   }, []);
-
-  const getBaseUrl = () => {
-    const baseUrl = (window as any).location.origin;
-    const contextPath = (window as any).AJS?.contextPath() || '';
-    return `${baseUrl}${contextPath}`;
-  };
 
   const loadSettings = async () => {
     try {

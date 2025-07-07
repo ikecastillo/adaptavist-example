@@ -8,7 +8,6 @@ import com.atlassian.plugin.spring.scanner.annotation.imports.JiraImport;
 import com.atlassian.sal.api.pluginsettings.PluginSettings;
 import com.atlassian.sal.api.pluginsettings.PluginSettingsFactory;
 import com.google.gson.Gson;
-import com.google.gson.reflect.TypeToken;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -16,9 +15,7 @@ import javax.inject.Inject;
 import javax.ws.rs.*;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 @Path("/settings")
@@ -26,8 +23,8 @@ public class PortalSettingsRestResource {
 
     private static final Logger log = LoggerFactory.getLogger(PortalSettingsRestResource.class);
     private static final String JQL_SETTINGS_KEY = "portal.jql";
-    private static final String BUTTON_SETTINGS_KEY = "portal.buttons";
-    private static final String DEFAULT_JQL = "project = WMPR ORDER BY created DESC";
+    private static final String BUTTON_SETTINGS_PREFIX = "portal.button.";
+    private static final String DEFAULT_JQL = "project = HELP ORDER BY created DESC";
 
     @JiraImport
     private final SearchService searchService;
@@ -66,19 +63,18 @@ public class PortalSettingsRestResource {
             
             Map<String, Object> response = new HashMap<>();
             
-            // Get JQL setting with default value
+            // Get JQL setting with default
             String jql = (String) settings.get(JQL_SETTINGS_KEY);
-            response.put("jql", jql != null ? jql : DEFAULT_JQL);
+            response.put("jql", jql != null && !jql.trim().isEmpty() ? jql : DEFAULT_JQL);
+            response.put("defaultJql", DEFAULT_JQL);
             
-            // Get button configurations
-            String buttonsJson = (String) settings.get(BUTTON_SETTINGS_KEY);
-            List<Map<String, String>> buttons;
-            if (buttonsJson != null) {
-                buttons = gson.fromJson(buttonsJson, new TypeToken<List<Map<String, String>>>(){}.getType());
-            } else {
-                buttons = new ArrayList<>();
+            // Get button settings
+            for (int i = 1; i <= 5; i++) {
+                String buttonLabel = (String) settings.get(BUTTON_SETTINGS_PREFIX + i + ".label");
+                String buttonUrl = (String) settings.get(BUTTON_SETTINGS_PREFIX + i + ".url");
+                response.put("button" + i + "Label", buttonLabel != null ? buttonLabel : "");
+                response.put("button" + i + "Url", buttonUrl != null ? buttonUrl : "");
             }
-            response.put("buttons", buttons);
             
             return Response.ok(gson.toJson(response)).build();
             
@@ -119,10 +115,8 @@ public class PortalSettingsRestResource {
             }
             
             String jql = (String) request.get("jql");
-            @SuppressWarnings("unchecked")
-            List<Map<String, String>> buttons = (List<Map<String, String>>) request.get("buttons");
             
-            log.debug("Parsed settings - jql: {}, buttons: {}", jql, buttons);
+            log.debug("Parsed settings - jql: {}", jql);
             
             // Validate JQL if provided
             if (jql != null && !jql.trim().isEmpty()) {
@@ -147,19 +141,6 @@ public class PortalSettingsRestResource {
                 }
             }
             
-            // Validate buttons if provided
-            if (buttons != null) {
-                for (Map<String, String> button : buttons) {
-                    if (!button.containsKey("label") || !button.containsKey("url")) {
-                        Map<String, Object> errorResponse = new HashMap<>();
-                        errorResponse.put("error", "Invalid button configuration. Each button must have 'label' and 'url'");
-                        return Response.status(Response.Status.BAD_REQUEST)
-                                .entity(gson.toJson(errorResponse))
-                                .build();
-                    }
-                }
-            }
-            
             // Save settings
             try {
                 PluginSettings settings = pluginSettingsFactory.createGlobalSettings();
@@ -167,11 +148,6 @@ public class PortalSettingsRestResource {
                 if (jql != null) {
                     settings.put(JQL_SETTINGS_KEY, jql.trim());
                     log.debug("Saved JQL: {}", jql);
-                }
-                
-                if (buttons != null) {
-                    settings.put(BUTTON_SETTINGS_KEY, gson.toJson(buttons));
-                    log.debug("Saved buttons: {}", buttons);
                 }
             } catch (Exception e) {
                 log.error("Failed to save settings: {}", e.getMessage());
@@ -194,6 +170,109 @@ public class PortalSettingsRestResource {
             log.error("Unexpected error in saveSettings: {}", e.getMessage());
             Map<String, Object> errorResponse = new HashMap<>();
             errorResponse.put("error", "Failed to save settings: " + e.getMessage());
+            return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
+                    .entity(gson.toJson(errorResponse))
+                    .build();
+        }
+    }
+
+    @GET
+    @Path("/buttons")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response getButtons() {
+        try {
+            ApplicationUser user = authenticationContext.getLoggedInUser();
+            if (user == null) {
+                return Response.status(Response.Status.UNAUTHORIZED)
+                        .entity("{\"error\":\"Authentication required\"}")
+                        .build();
+            }
+
+            PluginSettings settings = pluginSettingsFactory.createGlobalSettings();
+            
+            Map<String, Object> response = new HashMap<>();
+            
+            // Get button settings
+            for (int i = 1; i <= 5; i++) {
+                String buttonLabel = (String) settings.get(BUTTON_SETTINGS_PREFIX + i + ".label");
+                String buttonUrl = (String) settings.get(BUTTON_SETTINGS_PREFIX + i + ".url");
+                response.put("button" + i + "Label", buttonLabel != null ? buttonLabel : "");
+                response.put("button" + i + "Url", buttonUrl != null ? buttonUrl : "");
+            }
+            
+            return Response.ok(gson.toJson(response)).build();
+            
+        } catch (Exception e) {
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("error", "Failed to load button settings: " + e.getMessage());
+            return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
+                    .entity(gson.toJson(errorResponse))
+                    .build();
+        }
+    }
+
+    @POST
+    @Path("/buttons")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response saveButtons(String requestBody) {
+        try {
+            ApplicationUser user = authenticationContext.getLoggedInUser();
+            if (user == null) {
+                return Response.status(Response.Status.UNAUTHORIZED)
+                        .entity("{\"error\":\"Authentication required\"}")
+                        .build();
+            }
+
+            log.debug("Save buttons request body: {}", requestBody);
+            
+            // Parse the request
+            Map<String, Object> request;
+            try {
+                request = gson.fromJson(requestBody, Map.class);
+            } catch (Exception e) {
+                log.error("Failed to parse JSON request: {}", e.getMessage());
+                Map<String, Object> errorResponse = new HashMap<>();
+                errorResponse.put("error", "Invalid JSON format: " + e.getMessage());
+                return Response.status(Response.Status.BAD_REQUEST)
+                        .entity(gson.toJson(errorResponse))
+                        .build();
+            }
+            
+            // Save button settings
+            try {
+                PluginSettings settings = pluginSettingsFactory.createGlobalSettings();
+                
+                for (int i = 1; i <= 5; i++) {
+                    String buttonLabel = (String) request.get("button" + i + "Label");
+                    String buttonUrl = (String) request.get("button" + i + "Url");
+                    
+                    settings.put(BUTTON_SETTINGS_PREFIX + i + ".label", buttonLabel != null ? buttonLabel : "");
+                    settings.put(BUTTON_SETTINGS_PREFIX + i + ".url", buttonUrl != null ? buttonUrl : "");
+                    
+                    log.debug("Saved button{} - Label: {}, URL: {}", i, buttonLabel, buttonUrl);
+                }
+            } catch (Exception e) {
+                log.error("Failed to save button settings: {}", e.getMessage());
+                Map<String, Object> errorResponse = new HashMap<>();
+                errorResponse.put("error", "Failed to save button settings: " + e.getMessage());
+                return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
+                        .entity(gson.toJson(errorResponse))
+                        .build();
+            }
+            
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("message", "Button settings saved successfully");
+            
+            log.info("Button settings saved successfully");
+            
+            return Response.ok(gson.toJson(response)).build();
+            
+        } catch (Exception e) {
+            log.error("Unexpected error in saveButtons: {}", e.getMessage());
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("error", "Failed to save button settings: " + e.getMessage());
             return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
                     .entity(gson.toJson(errorResponse))
                     .build();

@@ -79,7 +79,7 @@ const WMPRSettings: React.FC = () => {
   const loadSettings = async () => {
     try {
       const baseUrl = getBaseUrl();
-      const response = await fetch(`${baseUrl}/rest/wmpr-requests/1.0/settings`, {
+      const response = await fetch(`${baseUrl}/rest/portal-requests/1.0/settings`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -117,7 +117,7 @@ const WMPRSettings: React.FC = () => {
     try {
       setLoadingConfluenceSpaces(true);
       const baseUrl = getBaseUrl();
-      const response = await fetch(`${baseUrl}/rest/wmpr-requests/1.0/settings/confluence-spaces`, {
+      const response = await fetch(`${baseUrl}/rest/portal-requests/1.0/settings/confluence-spaces`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -146,7 +146,7 @@ const WMPRSettings: React.FC = () => {
     try {
       setValidating(true);
       const baseUrl = getBaseUrl();
-      const response = await fetch(`${baseUrl}/rest/wmpr-requests/1.0/settings/validate-jql`, {
+      const response = await fetch(`${baseUrl}/rest/portal-requests/1.0/settings/validate-jql`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -170,7 +170,7 @@ const WMPRSettings: React.FC = () => {
       setSaveMessage(null);
 
       const baseUrl = getBaseUrl();
-      const response = await fetch(`${baseUrl}/rest/wmpr-requests/1.0/settings`, {
+      const response = await fetch(`${baseUrl}/rest/portal-requests/1.0/settings`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -203,7 +203,7 @@ const WMPRSettings: React.FC = () => {
       setSaveMessage(null);
 
       const baseUrl = getBaseUrl();
-      const response = await fetch(`${baseUrl}/rest/wmpr-requests/1.0/settings/buttons`, {
+      const response = await fetch(`${baseUrl}/rest/portal-requests/1.0/settings/buttons`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -233,7 +233,7 @@ const WMPRSettings: React.FC = () => {
       setSaveMessage(null);
 
       const baseUrl = getBaseUrl();
-      const response = await fetch(`${baseUrl}/rest/wmpr-requests/1.0/settings`, {
+      const response = await fetch(`${baseUrl}/rest/portal-requests/1.0/settings`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

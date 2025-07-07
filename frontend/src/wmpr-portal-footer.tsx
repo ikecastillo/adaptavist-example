@@ -5,6 +5,8 @@ import Spinner from '@atlaskit/spinner';
 import Button from '@atlaskit/button';
 import { getBaseUrl } from './utils/projectKey';
 import { logger } from './utils/logger';
+import Textfield from '@atlaskit/textfield';
+import SectionMessage from '@atlaskit/section-message';
 
 interface ServiceDeskRequest {
   key: string;
@@ -38,6 +40,9 @@ const PortalFooter: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [buttonConfigs, setButtonConfigs] = useState<ButtonConfig[]>([]);
+  const [aiQuery, setAiQuery] = useState<string>('');
+  const [aiResults, setAiResults] = useState<{ response: string; pages: { id: string; title: string; url: string; space: string; }[] } | null>(null);
+  const [aiLoading, setAiLoading] = useState<boolean>(false);
 
   useEffect(() => {
     initializeComponent();
@@ -160,6 +165,44 @@ const PortalFooter: React.FC = () => {
         return 'success';
       default:
         return 'default';
+    }
+  };
+
+  const handleAiQuery = async () => {
+    if (!aiQuery.trim()) return;
+    try {
+      setAiLoading(true);
+      setAiResults(null);
+      // Simulate AI response with Confluence pages
+      setTimeout(() => {
+        const mockResponse = {
+          response: `Based on your question "${aiQuery}", here are some relevant resources and recommendations for handling this type of request. The most common approach is to follow our standard escalation procedures and ensure proper documentation.`,
+          pages: [
+            {
+              id: '1',
+              title: 'Service Desk Escalation Procedures',
+              url: 'https://confluence.example.com/display/HELP/Escalation+Procedures',
+              space: 'HELP'
+            },
+            {
+              id: '2',
+              title: 'Request Handling Best Practices',
+              url: 'https://confluence.example.com/display/HELP/Request+Handling+Best+Practices',
+              space: 'HELP'
+            },
+            {
+              id: '3',
+              title: 'Customer Portal Configuration Guide',
+              url: 'https://confluence.example.com/display/HELP/Customer+Portal+Configuration',
+              space: 'HELP'
+            }
+          ]
+        };
+        setAiResults(mockResponse);
+        setAiLoading(false);
+      }, 2000);
+    } catch (error) {
+      setAiLoading(false);
     }
   };
 
@@ -346,6 +389,82 @@ const PortalFooter: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Test AI Integration UI */}
+      <div style={{ marginTop: '40px', padding: '24px', background: '#f8f9fa', borderRadius: '8px', border: '1px solid #dfe1e6' }}>
+        <h3 style={{ margin: '0 0 12px 0', fontSize: '18px', fontWeight: '600', color: '#172b4d' }}>
+          Test AI Integration
+        </h3>
+        <SectionMessage appearance="information">
+          <p>
+            Ask a question about request handling. This demo returns mock Confluence knowledge base results.
+          </p>
+        </SectionMessage>
+        <div style={{ display: 'flex', gap: '12px', margin: '20px 0' }}>
+          <Textfield
+            placeholder="Ask a question about request handling..."
+            value={aiQuery}
+            onChange={(e) => setAiQuery((e.target as HTMLInputElement).value)}
+            style={{ flex: 1 }}
+          />
+          <Button
+            appearance="primary"
+            onClick={handleAiQuery}
+            isDisabled={!aiQuery.trim() || aiLoading}
+          >
+            {aiLoading ? 'Searching...' : 'Ask AI'}
+          </Button>
+        </div>
+        {aiLoading && (
+          <div style={{ textAlign: 'center', padding: '40px' }}>
+            <Spinner size="medium" />
+            <p style={{ marginTop: '12px', color: '#6b778c' }}>
+              Searching knowledge base and generating response...
+            </p>
+          </div>
+        )}
+        {aiResults && (
+          <div style={{ marginTop: '20px' }}>
+            <div style={{
+              background: '#f4f5f7',
+              border: '1px solid #dfe1e6',
+              borderRadius: '6px',
+              padding: '16px',
+              marginBottom: '16px'
+            }}>
+              <h4 style={{ margin: '0 0 8px 0', fontSize: '14px', fontWeight: '600', color: '#172b4d' }}>
+                AI Response:
+              </h4>
+              <p style={{ margin: '0', color: '#172b4d', lineHeight: '1.5' }}>
+                {aiResults.response}
+              </p>
+            </div>
+            <h4 style={{ margin: '0 0 12px 0', fontSize: '14px', fontWeight: '600', color: '#172b4d' }}>
+              Relevant Confluence Pages:
+            </h4>
+            <div style={{ display: 'grid', gap: '8px' }}>
+              {aiResults.pages.map((page, index) => (
+                <div key={page.id} style={{
+                  padding: '12px',
+                  border: '1px solid #dfe1e6',
+                  borderRadius: '4px',
+                  backgroundColor: '#ffffff'
+                }}>
+                  <div style={{ fontWeight: '600', color: '#172b4d', marginBottom: '4px' }}>
+                    {page.title}
+                  </div>
+                  <div style={{ fontSize: '12px', color: '#6b778c' }}>
+                    Space: {page.space} •
+                    <a href={page.url} target="_blank" rel="noopener noreferrer" style={{ color: '#0052cc', marginLeft: '4px' }}>
+                      View Page
+                    </a>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 };

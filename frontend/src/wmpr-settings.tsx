@@ -6,6 +6,7 @@ import SectionMessage from '@atlaskit/section-message';
 import Spinner from '@atlaskit/spinner';
 import Tabs, { Tab, TabList, TabPanel } from '@atlaskit/tabs';
 import { type SelectedType } from '@atlaskit/tabs/types';
+import Select from '@atlaskit/select';
 import { getBaseUrl } from './utils/projectKey';
 
 interface SettingsData {
@@ -37,6 +38,11 @@ interface ConfluencePage {
   space: string;
 }
 
+interface ConfluenceSpaceOption {
+  value: string;
+  label: string;
+}
+
 const WMPRSettings: React.FC = () => {
   const [settings, setSettings] = useState<SettingsData>({
     jql: '',
@@ -57,79 +63,102 @@ const WMPRSettings: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const [saving, setSaving] = useState<boolean>(false);
   const [savingButtons, setSavingButtons] = useState<boolean>(false);
+  const [savingConfluence, setSavingConfluence] = useState<boolean>(false);
   const [validating, setValidating] = useState<boolean>(false);
   const [validationResult, setValidationResult] = useState<ValidationResult | null>(null);
   const [saveMessage, setSaveMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
   const [selectedTab, setSelectedTab] = useState<number>(0);
-  const [aiQuery, setAiQuery] = useState<string>('');
-  const [aiResults, setAiResults] = useState<{ response: string; pages: ConfluencePage[] } | null>(null);
-  const [aiLoading, setAiLoading] = useState<boolean>(false);
+  const [confluenceSpaces, setConfluenceSpaces] = useState<ConfluenceSpaceOption[]>([]);
+  const [loadingConfluenceSpaces, setLoadingConfluenceSpaces] = useState<boolean>(false);
 
   useEffect(() => {
     loadSettings();
+    loadConfluenceSpaces();
   }, []);
 
   const loadSettings = async () => {
     try {
-      setLoading(true);
-
-      const url = `${getBaseUrl()}/rest/portal-requests/1.0/settings`;
-
-      console.log('Loading settings from:', url);
-
-      const response = await fetch(url, {
+      const baseUrl = getBaseUrl();
+      const response = await fetch(`${baseUrl}/rest/wmpr-requests/1.0/settings`, {
         method: 'GET',
         headers: {
-          'Accept': 'application/json',
           'Content-Type': 'application/json',
         },
-        credentials: 'same-origin'
       });
 
-      if (!response.ok) {
-        throw new Error(`Failed to load settings: ${response.status}`);
+      if (response.ok) {
+        const data = await response.json();
+        setSettings({
+          jql: data.jql || '',
+          defaultJql: data.defaultJql || 'project = HELP ORDER BY created DESC',
+          button1Label: data.button1Label || '',
+          button1Url: data.button1Url || '',
+          button2Label: data.button2Label || '',
+          button2Url: data.button2Url || '',
+          button3Label: data.button3Label || '',
+          button3Url: data.button3Url || '',
+          button4Label: data.button4Label || '',
+          button4Url: data.button4Url || '',
+          button5Label: data.button5Label || '',
+          button5Url: data.button5Url || '',
+          confluenceSpaces: data.confluenceSpaces || []
+        });
+      } else {
+        console.error('Failed to load settings');
       }
-
-      const data = await response.json();
-      setSettings(data);
     } catch (error) {
       console.error('Error loading settings:', error);
-      setSaveMessage({ type: 'error', text: `Error loading settings: ${error instanceof Error ? error.message : 'Unknown error'}` });
     } finally {
       setLoading(false);
     }
   };
 
+  const loadConfluenceSpaces = async () => {
+    try {
+      setLoadingConfluenceSpaces(true);
+      const baseUrl = getBaseUrl();
+      const response = await fetch(`${baseUrl}/rest/wmpr-requests/1.0/settings/confluence-spaces`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setConfluenceSpaces(data.spaces || []);
+      } else {
+        console.error('Failed to load Confluence spaces');
+      }
+    } catch (error) {
+      console.error('Error loading Confluence spaces:', error);
+    } finally {
+      setLoadingConfluenceSpaces(false);
+    }
+  };
+
   const validateJql = async (jql: string) => {
-    if (!jql || jql.trim() === '') {
+    if (!jql.trim()) {
       setValidationResult({ valid: false, message: 'JQL cannot be empty' });
       return;
     }
 
     try {
       setValidating(true);
-      const response = await fetch(`${getBaseUrl()}/rest/portal-requests/1.0/settings/validate-jql`, {
+      const baseUrl = getBaseUrl();
+      const response = await fetch(`${baseUrl}/rest/wmpr-requests/1.0/settings/validate-jql`, {
         method: 'POST',
         headers: {
-          'Accept': 'application/json',
           'Content-Type': 'application/json',
         },
-        credentials: 'same-origin',
-        body: JSON.stringify({ jql })
+        body: JSON.stringify({ jql }),
       });
-
-      if (!response.ok) {
-        throw new Error(`Validation failed: ${response.status}`);
-      }
 
       const result = await response.json();
       setValidationResult(result);
     } catch (error) {
       console.error('Error validating JQL:', error);
-      setValidationResult({
-        valid: false,
-        message: `Validation error: ${error instanceof Error ? error.message : 'Unknown error'}`
-      });
+      setValidationResult({ valid: false, message: 'Failed to validate JQL' });
     } finally {
       setValidating(false);
     }
@@ -140,38 +169,29 @@ const WMPRSettings: React.FC = () => {
       setSaving(true);
       setSaveMessage(null);
 
-      const payload = {
-        jql: data.jql
-      };
-
-      console.log('Saving JQL settings:', payload);
-
-      const response = await fetch(`${getBaseUrl()}/rest/portal-requests/1.0/settings`, {
+      const baseUrl = getBaseUrl();
+      const response = await fetch(`${baseUrl}/rest/wmpr-requests/1.0/settings`, {
         method: 'POST',
         headers: {
-          'Accept': 'application/json',
           'Content-Type': 'application/json',
         },
-        credentials: 'same-origin',
-        body: JSON.stringify(payload)
+        body: JSON.stringify({
+          jql: data.jql,
+          confluenceSpaces: settings.confluenceSpaces
+        }),
       });
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Failed to save settings: ${response.status} - ${errorText}`);
+      if (response.ok) {
+        const result = await response.json();
+        setSaveMessage({ type: 'success', text: result.message || 'Settings saved successfully' });
+        await loadSettings();
+      } else {
+        const error = await response.json();
+        setSaveMessage({ type: 'error', text: error.error || 'Failed to save settings' });
       }
-
-      const result = await response.json();
-      setSaveMessage({ type: 'success', text: result.message || 'JQL settings saved successfully!' });
-
-      // Update local state
-      setSettings(prev => ({ ...prev, jql: data.jql }));
     } catch (error) {
-      console.error('Error saving JQL settings:', error);
-      setSaveMessage({
-        type: 'error',
-        text: `Error saving JQL settings: ${error instanceof Error ? error.message : 'Unknown error'}`
-      });
+      console.error('Error saving settings:', error);
+      setSaveMessage({ type: 'error', text: 'Failed to save settings' });
     } finally {
       setSaving(false);
     }
@@ -182,91 +202,61 @@ const WMPRSettings: React.FC = () => {
       setSavingButtons(true);
       setSaveMessage(null);
 
-      const payload = {
-        button1Label: data.button1Label || '',
-        button1Url: data.button1Url || '',
-        button2Label: data.button2Label || '',
-        button2Url: data.button2Url || '',
-        button3Label: data.button3Label || '',
-        button3Url: data.button3Url || '',
-        button4Label: data.button4Label || '',
-        button4Url: data.button4Url || '',
-        button5Label: data.button5Label || '',
-        button5Url: data.button5Url || ''
-      };
-
-      console.log('Saving button settings:', payload);
-
-      const response = await fetch(`${getBaseUrl()}/rest/portal-requests/1.0/settings/buttons`, {
+      const baseUrl = getBaseUrl();
+      const response = await fetch(`${baseUrl}/rest/wmpr-requests/1.0/settings/buttons`, {
         method: 'POST',
         headers: {
-          'Accept': 'application/json',
           'Content-Type': 'application/json',
         },
-        credentials: 'same-origin',
-        body: JSON.stringify(payload)
+        body: JSON.stringify(data),
       });
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Failed to save button settings: ${response.status} - ${errorText}`);
+      if (response.ok) {
+        const result = await response.json();
+        setSaveMessage({ type: 'success', text: result.message || 'Button settings saved successfully' });
+        await loadSettings();
+      } else {
+        const error = await response.json();
+        setSaveMessage({ type: 'error', text: error.error || 'Failed to save button settings' });
       }
-
-      const result = await response.json();
-      setSaveMessage({ type: 'success', text: result.message || 'Button settings saved successfully!' });
-
-      // Update local state
-      setSettings(prev => ({ ...prev, ...payload }));
     } catch (error) {
       console.error('Error saving button settings:', error);
-      setSaveMessage({
-        type: 'error',
-        text: `Error saving button settings: ${error instanceof Error ? error.message : 'Unknown error'}`
-      });
+      setSaveMessage({ type: 'error', text: 'Failed to save button settings' });
     } finally {
       setSavingButtons(false);
     }
   };
 
-  const handleAiQuery = async () => {
-    if (!aiQuery.trim()) return;
-
+  const handleConfluenceSubmit = async (data: any) => {
     try {
-      setAiLoading(true);
-      setAiResults(null);
+      setSavingConfluence(true);
+      setSaveMessage(null);
 
-      // Simulate AI response with Confluence pages
-      setTimeout(() => {
-        const mockResponse = {
-          response: `Based on your question "${aiQuery}", here are some relevant resources and recommendations for handling this type of request. The most common approach is to follow our standard escalation procedures and ensure proper documentation.`,
-          pages: [
-            {
-              id: '1',
-              title: 'Service Desk Escalation Procedures',
-              url: 'https://confluence.example.com/display/HELP/Escalation+Procedures',
-              space: 'HELP'
-            },
-            {
-              id: '2',
-              title: 'Request Handling Best Practices',
-              url: 'https://confluence.example.com/display/HELP/Request+Handling+Best+Practices',
-              space: 'HELP'
-            },
-            {
-              id: '3',
-              title: 'Customer Portal Configuration Guide',
-              url: 'https://confluence.example.com/display/HELP/Customer+Portal+Configuration',
-              space: 'HELP'
-            }
-          ]
-        };
-        setAiResults(mockResponse);
-        setAiLoading(false);
-      }, 2000);
+      const baseUrl = getBaseUrl();
+      const response = await fetch(`${baseUrl}/rest/wmpr-requests/1.0/settings`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          jql: settings.jql,
+          confluenceSpaces: data.confluenceSpaces
+        }),
+      });
 
+      if (response.ok) {
+        const result = await response.json();
+        setSaveMessage({ type: 'success', text: result.message || 'Confluence settings saved successfully' });
+        await loadSettings();
+      } else {
+        const error = await response.json();
+        setSaveMessage({ type: 'error', text: error.error || 'Failed to save Confluence settings' });
+      }
     } catch (error) {
-      console.error('Error querying AI:', error);
-      setAiLoading(false);
+      console.error('Error saving Confluence settings:', error);
+      setSaveMessage({ type: 'error', text: 'Failed to save Confluence settings' });
+    } finally {
+      setSavingConfluence(false);
     }
   };
 
@@ -327,28 +317,21 @@ const WMPRSettings: React.FC = () => {
   return (
       <div style={containerStyle}>
         <div style={headerStyle}>
-          <h1 style={{
-            marginBottom: '8px'
-          }}>
-            Portal Settings
+          <h1 style={{ margin: '0 0 8px 0', fontSize: '28px', fontWeight: '600', color: '#172b4d' }}>
+            WMPR Requests Settings
           </h1>
-          <p style={{
-            color: '#6b778c'
-          }}>
-            Configure JQL queries, portal buttons, and AI integration for the customer portal
+          <p style={{ margin: '0', fontSize: '16px', color: '#6b778c', lineHeight: '1.5' }}>
+            Configure JQL queries, portal buttons, and Confluence knowledge bases for WMPR request display.
           </p>
-
-          {saveMessage && (
-              <div style={{ marginTop: '16px' }}>
-                <SectionMessage
-                    appearance={saveMessage.type === 'success' ? 'success' : 'error'}
-                    title={saveMessage.type === 'success' ? 'Success' : 'Error'}
-                >
-                  <p>{saveMessage.text}</p>
-                </SectionMessage>
-              </div>
-          )}
         </div>
+
+        {saveMessage && (
+            <div style={{ marginBottom: '16px' }}>
+              <SectionMessage appearance={saveMessage.type}>
+                <p>{saveMessage.text}</p>
+              </SectionMessage>
+            </div>
+        )}
 
         <div style={contentStyle}>
           <div style={mainContentStyle}>
@@ -378,70 +361,45 @@ const WMPRSettings: React.FC = () => {
                         <form {...formProps}>
                           <Field
                               name="jql"
-                              defaultValue={settings.jql}
-                              validate={(value) => {
-                                if (!value || value.trim() === '') {
-                                  return 'JQL query is required';
-                                }
-                                return undefined;
-                              }}
+                              defaultValue={settings.jql || settings.defaultJql}
+                              label="JQL Query"
+                              isRequired
                           >
                             {({ fieldProps, error }) => (
-                                <div style={{ marginTop: '20px' }}>
-                                  <label style={{
-                                    display: 'block',
-                                    marginBottom: '8px',
-                                    fontWeight: '600',
-                                    color: '#172b4d'
-                                  }}>
-                                    JQL Query *
-                                  </label>
+                                <div>
                                   <Textfield
                                       {...fieldProps}
-                                      placeholder="e.g., project = HELP ORDER BY created DESC"
-                                      onBlur={() => {
-                                        if (fieldProps.value && fieldProps.value.trim() !== '') {
-                                          validateJql(fieldProps.value);
+                                      placeholder="Enter JQL query (e.g., project = HELP ORDER BY created DESC)"
+                                      onChange={(e) => {
+                                        const value = (e.target as HTMLInputElement).value;
+                                        fieldProps.onChange(e);
+                                        if (value.trim()) {
+                                          validateJql(value);
                                         } else {
                                           setValidationResult(null);
                                         }
                                       }}
                                   />
                                   {error && <ErrorMessage>{error}</ErrorMessage>}
-
-                                  {validating && (
-                                      <div style={{
-                                        marginTop: '8px',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        color: '#5e6c84'
-                                      }}>
-                                        <Spinner size="small" />
-                                        <span style={{ marginLeft: '8px' }}>Validating JQL...</span>
-                                      </div>
-                                  )}
-
-                                  {validationResult && !validating && (
+                                  {validationResult && (
                                       <div style={{ marginTop: '8px' }}>
                                         {validationResult.valid ? (
-                                            <HelperMessage>✅ JQL is valid</HelperMessage>
+                                            <HelperMessage>
+                                              ✓ {validationResult.message || 'JQL is valid'}
+                                            </HelperMessage>
                                         ) : (
                                             <ErrorMessage>
-                                              ❌ {validationResult.message || validationResult.errors}
+                                              ✗ {validationResult.message || validationResult.errors || 'Invalid JQL'}
                                             </ErrorMessage>
                                         )}
                                       </div>
                                   )}
-
-                                  <HelperMessage>
-                                    Examples:
-                                    <code style={{ background: '#f4f5f7', padding: '2px 4px', borderRadius: '3px', margin: '0 4px' }}>
-                                      project = HELP ORDER BY created DESC
-                                    </code>
-                                    <code style={{ background: '#f4f5f7', padding: '2px 4px', borderRadius: '3px', margin: '0 4px' }}>
-                                      assignee = currentUser() AND status != Done
-                                    </code>
-                                  </HelperMessage>
+                                  {validating && (
+                                      <div style={{ marginTop: '8px' }}>
+                                        <Spinner size="small" />
+                                        <span style={{ marginLeft: '8px', color: '#6b778c' }}>Validating JQL...</span>
+                                      </div>
+                                  )}
                                 </div>
                             )}
                           </Field>
@@ -503,46 +461,21 @@ const WMPRSettings: React.FC = () => {
                                         defaultValue={settings[`button${num}Label` as keyof SettingsData] as string}
                                     >
                                       {({ fieldProps }) => (
-                                          <div>
-                                            <label style={{
-                                              display: 'block',
-                                              marginBottom: '6px',
-                                              fontSize: '12px',
-                                              fontWeight: '600',
-                                              color: '#5e6c84',
-                                              textTransform: 'uppercase'
-                                            }}>
-                                              Button Label
-                                            </label>
-                                            <Textfield
-                                                {...fieldProps}
-                                                placeholder={`e.g., "Create Request"`}
-                                            />
-                                          </div>
+                                          <Textfield
+                                              {...fieldProps}
+                                              placeholder="Button Label"
+                                          />
                                       )}
                                     </Field>
-
                                     <Field
                                         name={`button${num}Url`}
                                         defaultValue={settings[`button${num}Url` as keyof SettingsData] as string}
                                     >
                                       {({ fieldProps }) => (
-                                          <div>
-                                            <label style={{
-                                              display: 'block',
-                                              marginBottom: '6px',
-                                              fontSize: '12px',
-                                              fontWeight: '600',
-                                              color: '#5e6c84',
-                                              textTransform: 'uppercase'
-                                            }}>
-                                              Button URL
-                                            </label>
-                                            <Textfield
-                                                {...fieldProps}
-                                                placeholder="https://example.com/create-request"
-                                            />
-                                          </div>
+                                          <Textfield
+                                              {...fieldProps}
+                                              placeholder="Button URL"
+                                          />
                                       )}
                                     </Field>
                                   </div>
@@ -582,82 +515,80 @@ const WMPRSettings: React.FC = () => {
 
                   <SectionMessage appearance="information">
                     <p>
-                      Configure AI-powered assistance for customers. Add Confluence knowledge bases to provide intelligent responses
+                      Configure AI-powered assistance for customers. Select Confluence knowledge bases to provide intelligent responses
                       to customer questions and return relevant documentation.
                     </p>
                   </SectionMessage>
 
                   <div style={{ marginTop: '20px' }}>
                     <h3 style={{ margin: '0 0 12px 0', fontSize: '16px', fontWeight: '600', color: '#172b4d' }}>
-                      Test AI Integration
+                      Confluence Space Keys
                     </h3>
+                    <p style={{ margin: '0 0 16px 0', color: '#6b778c', fontSize: '14px' }}>
+                      Select the Confluence spaces that will be used as knowledge bases for AI-powered customer assistance.
+                      Only spaces you have access to will be displayed.
+                    </p>
 
-                    <div style={{ display: 'flex', gap: '12px', marginBottom: '20px' }}>
-                      <Textfield
-                          placeholder="Ask a question about request handling..."
-                          value={aiQuery}
-                          onChange={(e) => setAiQuery((e.target as HTMLInputElement).value)}
-                          style={{ flex: 1 }}
-                      />
-                      <Button
-                          appearance="primary"
-                          onClick={handleAiQuery}
-                          isDisabled={!aiQuery.trim() || aiLoading}
-                      >
-                        {aiLoading ? 'Searching...' : 'Ask AI'}
-                      </Button>
-                    </div>
-
-                    {aiLoading && (
+                    {loadingConfluenceSpaces ? (
                         <div style={{ textAlign: 'center', padding: '40px' }}>
                           <Spinner size="medium" />
                           <p style={{ marginTop: '12px', color: '#6b778c' }}>
-                            Searching knowledge base and generating response...
+                            Loading available Confluence spaces...
                           </p>
                         </div>
-                    )}
+                    ) : (
+                        <Form onSubmit={handleConfluenceSubmit}>
+                            {({ formProps }) => (
+                                <form {...formProps}>
+                                  <Field
+                                      name="confluenceSpaces"
+                                      label="Select Confluence Spaces"
+                                      defaultValue={settings.confluenceSpaces}
+                                  >
+                                    {({ fieldProps, error }) => (
+                                        <div>
+                                          <Select
+                                              inputId="confluence-spaces-select"
+                                              testId="confluence-spaces-select"
+                                              options={confluenceSpaces}
+                                              placeholder="Choose Confluence spaces"
+                                              isMulti
+                                              isSearchable
+                                              isClearable
+                                              value={Array.isArray(fieldProps.value) ? fieldProps.value.map((space: string) => confluenceSpaces.find(opt => opt.value === space) || { value: space, label: space }) : []}
+                                              onChange={(newValue) => {
+                                                const selectedValues = Array.isArray(newValue) ? newValue.map(item => item.value) : [];
+                                                fieldProps.onChange(selectedValues);
+                                              }}
+                                          />
+                                          {error && <ErrorMessage>{error}</ErrorMessage>}
+                                          <HelperMessage>
+                                            Selected spaces will be used as knowledge bases for AI responses in the customer portal.
+                                          </HelperMessage>
+                                        </div>
+                                    )}
+                                  </Field>
 
-                    {aiResults && (
-                        <div style={{ marginTop: '20px' }}>
-                          <div style={{
-                            background: '#f4f5f7',
-                            border: '1px solid #dfe1e6',
-                            borderRadius: '6px',
-                            padding: '16px',
-                            marginBottom: '16px'
-                          }}>
-                            <h4 style={{ margin: '0 0 8px 0', fontSize: '14px', fontWeight: '600', color: '#172b4d' }}>
-                              AI Response:
-                            </h4>
-                            <p style={{ margin: '0', color: '#172b4d', lineHeight: '1.5' }}>
-                              {aiResults.response}
-                            </p>
-                          </div>
-
-                          <h4 style={{ margin: '0 0 12px 0', fontSize: '14px', fontWeight: '600', color: '#172b4d' }}>
-                            Relevant Confluence Pages:
-                          </h4>
-                          <div style={{ display: 'grid', gap: '8px' }}>
-                            {aiResults.pages.map((page, index) => (
-                                <div key={page.id} style={{
-                                  padding: '12px',
-                                  border: '1px solid #dfe1e6',
-                                  borderRadius: '4px',
-                                  backgroundColor: '#ffffff'
-                                }}>
-                                  <div style={{ fontWeight: '600', color: '#172b4d', marginBottom: '4px' }}>
-                                    {page.title}
-                                  </div>
-                                  <div style={{ fontSize: '12px', color: '#6b778c' }}>
-                                    Space: {page.space} •
-                                    <a href={page.url} target="_blank" rel="noopener noreferrer" style={{ color: '#0052cc', marginLeft: '4px' }}>
-                                      View Page
-                                    </a>
-                                  </div>
-                                </div>
-                            ))}
-                          </div>
-                        </div>
+                                  <FormFooter>
+                                    <ButtonGroup>
+                                      <Button
+                                          type="submit"
+                                          appearance="primary"
+                                          isDisabled={savingConfluence}
+                                      >
+                                        {savingConfluence ? 'Saving...' : 'Save Confluence Settings'}
+                                      </Button>
+                                      <Button
+                                          onClick={loadSettings}
+                                          isDisabled={savingConfluence}
+                                      >
+                                        Reset
+                                      </Button>
+                                    </ButtonGroup>
+                                  </FormFooter>
+                                </form>
+                            )}
+                        </Form>
                     )}
                   </div>
                 </div>
@@ -731,10 +662,10 @@ const WMPRSettings: React.FC = () => {
                 cAIke Integration
               </h4>
               <div style={{ fontSize: '12px', color: '#6b778c' }}>
-                <strong>Status:</strong> Ready for testing
+                <strong>Status:</strong> {settings.confluenceSpaces.length > 0 ? 'Configured' : 'Not configured'}
               </div>
               <div style={{ fontSize: '12px', color: '#6b778c', marginTop: '4px' }}>
-                <strong>Knowledge Bases:</strong> HELP Space
+                <strong>Knowledge Bases:</strong> {settings.confluenceSpaces.length > 0 ? settings.confluenceSpaces.join(', ') : 'None selected'}
               </div>
             </div>
           </div>

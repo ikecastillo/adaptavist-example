@@ -22,8 +22,7 @@ import java.util.Map;
 public class PortalSettingsRestResource {
 
     private static final Logger log = LoggerFactory.getLogger(PortalSettingsRestResource.class);
-    private static final String SETTINGS_KEY_PREFIX = "portal.settings.";
-    private static final String DEFAULT_JQL_TEMPLATE = "project = %s ORDER BY created DESC";
+    private static final String JQL_SETTINGS_KEY = "portal.jql";
 
     @JiraImport
     private final SearchService searchService;
@@ -49,7 +48,7 @@ public class PortalSettingsRestResource {
 
     @GET
     @Produces(MediaType.APPLICATION_JSON)
-    public Response getSettings(@QueryParam("projectKey") String projectKey) {
+    public Response getSettings() {
         try {
             ApplicationUser user = authenticationContext.getLoggedInUser();
             if (user == null) {
@@ -62,37 +61,9 @@ public class PortalSettingsRestResource {
             
             Map<String, Object> response = new HashMap<>();
             
-            String settingsProjectKey = projectKey;
-            if (settingsProjectKey == null || settingsProjectKey.trim().isEmpty()) {
-                settingsProjectKey = "global";
-            }
-            
-            // Get JQL settings
-            String jql = (String) settings.get(SETTINGS_KEY_PREFIX + settingsProjectKey + ".jql");
-            Object useCustomObj = settings.get(SETTINGS_KEY_PREFIX + settingsProjectKey + ".useCustom");
-            
-            boolean useCustomJql = false;
-            if (useCustomObj instanceof Boolean) {
-                useCustomJql = (Boolean) useCustomObj;
-            } else if (useCustomObj instanceof String) {
-                useCustomJql = "true".equals(useCustomObj);
-            }
-            
-            response.put("projectKey", settingsProjectKey);
-            String defaultProjectKey = (settingsProjectKey != null && !settingsProjectKey.equals("global")) ? settingsProjectKey : "WMPR";
-            String defaultJql = String.format(DEFAULT_JQL_TEMPLATE, defaultProjectKey);
-            response.put("jql", jql != null ? jql : defaultJql);
-            response.put("useCustomJql", useCustomJql);
-            
-            // Get button settings
-            for (int i = 1; i <= 5; i++) {
-                String buttonLabel = (String) settings.get(SETTINGS_KEY_PREFIX + settingsProjectKey + ".button" + i + "Label");
-                String buttonUrl = (String) settings.get(SETTINGS_KEY_PREFIX + settingsProjectKey + ".button" + i + "Url");
-                response.put("button" + i + "Label", buttonLabel != null ? buttonLabel : "");
-                response.put("button" + i + "Url", buttonUrl != null ? buttonUrl : "");
-            }
-            
-            response.put("defaultJql", defaultJql);
+            // Get JQL setting
+            String jql = (String) settings.get(JQL_SETTINGS_KEY);
+            response.put("jql", jql != null ? jql : "");
             
             return Response.ok(gson.toJson(response)).build();
             
@@ -132,27 +103,12 @@ public class PortalSettingsRestResource {
                         .build();
             }
             
-            String projectKey = (String) request.get("projectKey");
             String jql = (String) request.get("jql");
-            Boolean useCustomJql = (Boolean) request.get("useCustomJql");
             
-            // Extract button settings
-            String[] buttonLabels = new String[5];
-            String[] buttonUrls = new String[5];
-            for (int i = 0; i < 5; i++) {
-                buttonLabels[i] = (String) request.get("button" + (i + 1) + "Label");
-                buttonUrls[i] = (String) request.get("button" + (i + 1) + "Url");
-            }
-            
-            log.debug("Parsed settings - projectKey: {}, jql: {}, useCustomJql: {}", 
-                new Object[]{projectKey, jql, useCustomJql});
-            
-            if (projectKey == null || projectKey.trim().isEmpty()) {
-                projectKey = "global";
-            }
+            log.debug("Parsed settings - jql: {}", jql);
             
             // Validate JQL if provided
-            if (useCustomJql != null && useCustomJql && jql != null && !jql.trim().isEmpty()) {
+            if (jql != null && !jql.trim().isEmpty()) {
                 try {
                     SearchService.ParseResult parseResult = searchService.parseQuery(user, jql);
                     if (!parseResult.isValid()) {
@@ -177,27 +133,10 @@ public class PortalSettingsRestResource {
             // Save settings
             try {
                 PluginSettings settings = pluginSettingsFactory.createGlobalSettings();
-                String keyPrefix = SETTINGS_KEY_PREFIX + projectKey + ".";
                 
                 if (jql != null) {
-                    settings.put(keyPrefix + "jql", jql);
-                    log.debug("Saved JQL for {}: {}", projectKey, jql);
-                }
-                if (useCustomJql != null) {
-                    settings.put(keyPrefix + "useCustom", useCustomJql.toString());
-                    log.debug("Saved useCustom for {}: {}", projectKey, useCustomJql);
-                }
-                
-                // Save button settings
-                for (int i = 0; i < 5; i++) {
-                    String buttonLabel = buttonLabels[i];
-                    String buttonUrl = buttonUrls[i];
-                    
-                    settings.put(keyPrefix + "button" + (i + 1) + "Label", buttonLabel != null ? buttonLabel : "");
-                    settings.put(keyPrefix + "button" + (i + 1) + "Url", buttonUrl != null ? buttonUrl : "");
-                    
-                    log.debug("Saved button{} for project {} - Label: {}, URL: {}", 
-                        new Object[]{(i + 1), projectKey, buttonLabel, buttonUrl});
+                    settings.put(JQL_SETTINGS_KEY, jql.trim());
+                    log.debug("Saved JQL: {}", jql);
                 }
             } catch (Exception e) {
                 log.error("Failed to save settings: {}", e.getMessage());
@@ -211,9 +150,8 @@ public class PortalSettingsRestResource {
             Map<String, Object> response = new HashMap<>();
             response.put("success", true);
             response.put("message", "Settings saved successfully");
-            response.put("projectKey", projectKey);
             
-            log.info("Settings saved successfully for project: {}", projectKey);
+            log.info("Settings saved successfully");
             
             return Response.ok(gson.toJson(response)).build();
             

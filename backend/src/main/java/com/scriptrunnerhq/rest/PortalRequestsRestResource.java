@@ -19,7 +19,6 @@ import javax.inject.Inject;
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
-import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.CacheControl;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
@@ -29,8 +28,7 @@ import java.util.*;
 public class PortalRequestsRestResource {
 
     private static final Logger log = LoggerFactory.getLogger(PortalRequestsRestResource.class);
-    private static final String DEFAULT_JQL_TEMPLATE = "project = %s ORDER BY created DESC";
-    private static final String SETTINGS_KEY_PREFIX = "portal.settings.";
+    private static final String JQL_SETTINGS_KEY = "portal.jql";
 
     @JiraImport
     private final SearchService searchService;
@@ -56,13 +54,11 @@ public class PortalRequestsRestResource {
 
     @GET
     @Produces(MediaType.APPLICATION_JSON)
-    public Response getRecentRequests(@QueryParam("projectKey") String projectKey) {
+    public Response getRecentRequests() {
         long startTime = System.currentTimeMillis();
         String requestId = "PORTAL-" + startTime;
         
-        // Enhanced logging for diagnostics
         log.debug("[{}] Portal REST API called at: {}", requestId, new Date());
-        log.debug("[{}] Project key: {}", requestId, projectKey);
         
         try {
             // Check authentication
@@ -75,24 +71,21 @@ public class PortalRequestsRestResource {
                 return createOptimizedResponse(errorResponse, Response.Status.UNAUTHORIZED);
             }
 
-            // Get configured JQL from plugin settings
-            String jql = getConfiguredJql(projectKey);
+            // Get JQL from plugin settings
+            String jql = getConfiguredJql();
             log.debug("[{}] Using JQL: {}", requestId, jql);
+            
+            if (jql == null || jql.trim().isEmpty()) {
+                log.warn("[{}] No JQL configured", requestId);
+                String errorResponse = "{\"error\":\"No JQL query configured\",\"requestId\":\"" + requestId + "\"}";
+                return createOptimizedResponse(errorResponse, Response.Status.BAD_REQUEST);
+            }
             
             SearchService.ParseResult parseResult = searchService.parseQuery(user, jql);
             if (!parseResult.isValid()) {
-                log.warn("[{}] Configured JQL invalid, trying fallback", requestId);
-                // Fallback to a more generic JQL if configured one fails
-                String fallbackProjectKey = (projectKey != null && !projectKey.equals("global")) ? projectKey : "WMPR";
-                jql = String.format(DEFAULT_JQL_TEMPLATE, fallbackProjectKey);
-                parseResult = searchService.parseQuery(user, jql);
-                log.debug("[{}] Fallback JQL: {}", requestId, jql);
-                
-                if (!parseResult.isValid()) {
-                    log.error("[{}] Both JQL queries invalid", requestId);
-                    String errorResponse = "{\"error\":\"Invalid JQL query\",\"requestId\":\"" + requestId + "\"}";
-                    return createOptimizedResponse(errorResponse, Response.Status.BAD_REQUEST);
-                }
+                log.error("[{}] JQL query invalid: {}", requestId, parseResult.getErrors());
+                String errorResponse = "{\"error\":\"Invalid JQL query\",\"requestId\":\"" + requestId + "\"}";
+                return createOptimizedResponse(errorResponse, Response.Status.BAD_REQUEST);
             }
 
             // Execute search with limit of 10
@@ -149,39 +142,23 @@ public class PortalRequestsRestResource {
     }
     
     /**
-     * Gets the configured JQL for the specified project, or returns default if not configured
+     * Gets the configured JQL from plugin settings
      */
-    private String getConfiguredJql(String projectKey) {
+    private String getConfiguredJql() {
         try {
-            // If no project key provided, use global settings or default JQL
-            if (projectKey == null || projectKey.trim().isEmpty()) {
-                projectKey = "global";
-            }
-            
             PluginSettings settings = pluginSettingsFactory.createGlobalSettings();
-            String configuredJql = (String) settings.get(SETTINGS_KEY_PREFIX + projectKey + ".jql");
-            Object useCustomJqlObj = settings.get(SETTINGS_KEY_PREFIX + projectKey + ".useCustom");
+            String configuredJql = (String) settings.get(JQL_SETTINGS_KEY);
             
-            // Handle both Boolean and String values for useCustom setting
-            boolean useCustomJql = false;
-            if (useCustomJqlObj instanceof Boolean) {
-                useCustomJql = (Boolean) useCustomJqlObj;
-            } else if (useCustomJqlObj instanceof String) {
-                useCustomJql = "true".equals(useCustomJqlObj);
-            }
-            
-            if (useCustomJql && configuredJql != null && !configuredJql.trim().isEmpty()) {
-                log.debug("Found custom JQL for project {}: {}", projectKey, configuredJql);
-                return configuredJql;
+            if (configuredJql != null && !configuredJql.trim().isEmpty()) {
+                log.debug("Found configured JQL: {}", configuredJql);
+                return configuredJql.trim();
             } else {
-                log.debug("Using default JQL for project {}", projectKey);
-                String defaultProjectKey = (projectKey != null && !projectKey.equals("global")) ? projectKey : "WMPR";
-                return String.format(DEFAULT_JQL_TEMPLATE, defaultProjectKey);
+                log.debug("No JQL configured");
+                return null;
             }
         } catch (Exception e) {
-            log.error("Error loading JQL settings for project: {}", e.getMessage());
-            String defaultProjectKey = (projectKey != null && !projectKey.equals("global")) ? projectKey : "WMPR";
-            return String.format(DEFAULT_JQL_TEMPLATE, defaultProjectKey);
+            log.error("Error loading JQL settings: {}", e.getMessage());
+            return null;
         }
     }
     
@@ -189,32 +166,15 @@ public class PortalRequestsRestResource {
      * Creates an optimized HTTP response to avoid chunked encoding issues in load balancer environments
      */
     private Response createOptimizedResponse(String jsonContent, Response.Status status) {
-        // Calculate content length to avoid chunked encoding
-        byte[] contentBytes = jsonContent.getBytes();
-        int contentLength = contentBytes.length;
-        
-        // Create cache control for better performance
         CacheControl cacheControl = new CacheControl();
-        cacheControl.setMaxAge(30); // 30 seconds cache
-        cacheControl.setNoCache(false);
-        cacheControl.setMustRevalidate(false);
+        cacheControl.setNoCache(true);
+        cacheControl.setNoStore(true);
         
         return Response.status(status)
                 .entity(jsonContent)
                 .type(MediaType.APPLICATION_JSON)
                 .cacheControl(cacheControl)
-                // Explicitly set content length to prevent chunked encoding
-                .header("Content-Length", String.valueOf(contentLength))
-                // CORS headers for load balancer environments
-                .header("Access-Control-Allow-Origin", "*")
-                .header("Access-Control-Allow-Methods", "GET, OPTIONS")
-                .header("Access-Control-Allow-Headers", "Content-Type, Authorization")
-                // Compression hints for load balancers
-                .header("X-Content-Type-Options", "nosniff")
-                .header("X-Frame-Options", "SAMEORIGIN")
-                // Prevent proxy caching issues
-                .header("Pragma", "no-cache")
-                .header("Expires", "0")
+                .header("Content-Length", jsonContent.getBytes().length)
                 .build();
     }
     
@@ -226,7 +186,7 @@ public class PortalRequestsRestResource {
         diagnostics.put("user", user.getName());
         diagnostics.put("jql", jql);
         diagnostics.put("resultCount", resultCount);
-        diagnostics.put("version", "1.0.0-dynamic");
+        diagnostics.put("version", "1.0.0-simplified");
         return diagnostics;
     }
 } 

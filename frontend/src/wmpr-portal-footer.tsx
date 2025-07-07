@@ -3,7 +3,7 @@ import DynamicTable from '@atlaskit/dynamic-table';
 import Lozenge from '@atlaskit/lozenge';
 import Spinner from '@atlaskit/spinner';
 import Button from '@atlaskit/button';
-import { getCurrentProjectKey, getBaseUrl, getCurrentProjectKeyWithDetails } from './utils/projectKey';
+import { getBaseUrl } from './utils/projectKey';
 import { logger } from './utils/logger';
 
 interface ServiceDeskRequest {
@@ -38,8 +38,6 @@ const PortalFooter: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [buttonConfigs, setButtonConfigs] = useState<ButtonConfig[]>([]);
-  const [projectKey, setProjectKey] = useState<string>('global');
-  const [debugInfo, setDebugInfo] = useState<any>(null);
 
   useEffect(() => {
     initializeComponent();
@@ -47,19 +45,11 @@ const PortalFooter: React.FC = () => {
 
   const initializeComponent = async () => {
     try {
-      // Get project key from admin settings
-      const detectedProjectKey = await getCurrentProjectKey();
-      setProjectKey(detectedProjectKey);
-      
-      // Get debug info for troubleshooting
-      const details = await getCurrentProjectKeyWithDetails();
-      setDebugInfo(details);
-      
-      logger.info('Portal Footer initialized for project:', detectedProjectKey);
+      logger.info('Portal Footer initializing');
       
       await Promise.all([
-        fetchWMPRRequests(),
-        fetchButtonConfigs()
+        fetchRequests(),
+        // Removed button configs as they're no longer part of the simplified version
       ]);
     } catch (error) {
       logger.error('Error initializing Portal Footer:', error);
@@ -67,7 +57,7 @@ const PortalFooter: React.FC = () => {
     }
   };
 
-  const fetchWMPRRequests = async () => {
+  const fetchRequests = async () => {
     try {
       setLoading(true);
       setError(null);
@@ -75,14 +65,9 @@ const PortalFooter: React.FC = () => {
       const baseUrl = getBaseUrl();
       const apiUrl = `${baseUrl}/rest/portal-requests/1.0/recent`;
       
-      // Add project key as query parameter
-      const url = new URL(apiUrl);
-      url.searchParams.append('projectKey', projectKey);
+      logger.debug('Fetching requests from:', apiUrl);
       
-      logger.debug('Fetching requests from:', url.toString());
-      logger.debug('Project Key:', projectKey);
-      
-      const response = await fetch(url.toString(), {
+      const response = await fetch(apiUrl, {
         method: 'GET',
         headers: {
           'Accept': 'application/json',
@@ -114,68 +99,97 @@ const PortalFooter: React.FC = () => {
   };
 
   const fetchButtonConfigs = async () => {
-    try {
-      const baseUrl = getBaseUrl();
-      const url = new URL(`${baseUrl}/rest/portal-requests/1.0/settings`);
-      url.searchParams.append('projectKey', projectKey);
-      
-      logger.debug('Loading button configs for projectKey:', projectKey);
-      
-      const response = await fetch(url.toString(), {
-        method: 'GET',
-        headers: {
-          'Accept': 'application/json',
-          'Content-Type': 'application/json',
-        },
-        credentials: 'same-origin'
-      });
+    // Removed button configuration fetching as it's no longer part of the simplified version
+    setButtonConfigs([]);
+  };
 
-      if (response.ok) {
-        const data = await response.json();
-        // Extract button configurations from settings
-        const buttons: ButtonConfig[] = [];
-        for (let i = 1; i <= 5; i++) {
-          const label = data[`button${i}Label`];
-          const url = data[`button${i}Url`];
-          if (label && url) {
-            buttons.push({ label, url });
-          }
-        }
-        setButtonConfigs(buttons);
-        logger.debug('Button configs loaded:', buttons.length);
-      } else {
-        logger.warn('Failed to load button configs:', response.status);
-      }
-    } catch (error) {
-      logger.error('Error fetching button configs:', error);
-      // Don't show error for button configs, just silently fail
+  const formatDate = (dateString: string): string => {
+    try {
+      const date = new Date(dateString);
+      return date.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric'
+      });
+    } catch (e) {
+      return dateString;
     }
   };
 
-  const getStatusLozengeAppearance = (statusCategory: string) => {
-    switch (statusCategory.toLowerCase()) {
+  const getStatusLozengeAppearance = (statusCategory: string): 'default' | 'new' | 'inprogress' | 'moved' | 'success' | 'removed' => {
+    switch (statusCategory?.toLowerCase()) {
       case 'new':
-      case 'indeterminate':
-        return 'default';
-      case 'in-progress':
+        return 'new';
       case 'indeterminate':
         return 'inprogress';
       case 'done':
-      case 'complete':
         return 'success';
       default:
         return 'default';
     }
   };
 
-  const formatDate = (dateString: string) => {
-    try {
-      const date = new Date(dateString);
-      return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    } catch {
-      return dateString;
+  // Debug component for development
+  const DebugInfo = () => {
+    if (process.env.NODE_ENV !== 'development') {
+      return null;
     }
+
+    return (
+      <div style={{
+        background: '#f4f5f7',
+        border: '1px solid #dfe1e6',
+        borderRadius: '4px',
+        padding: '12px',
+        marginBottom: '16px',
+        fontSize: '12px',
+        fontFamily: 'monospace'
+      }}>
+        <strong>Debug Info:</strong><br/>
+        Requests: {requests.length}<br/>
+        Loading: {loading.toString()}<br/>
+        Error: {error || 'none'}<br/>
+        Base URL: {getBaseUrl()}
+      </div>
+    );
   };
+
+  if (loading) {
+    return (
+      <div style={{ padding: '20px', textAlign: 'center' }}>
+        <Spinner size="medium" />
+        <p style={{ marginTop: '10px', color: '#6b778c' }}>
+          Loading requests...
+        </p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div style={{ padding: '20px' }}>
+        <DebugInfo />
+        
+        <div style={{
+          background: '#ffebe6',
+          border: '1px solid #ff8b00',
+          borderRadius: '4px',
+          padding: '16px',
+          marginBottom: '16px'
+        }}>
+          <strong style={{ color: '#bf2600' }}>Error loading requests:</strong>
+          <p style={{ margin: '8px 0 0 0', color: '#6b778c' }}>{error}</p>
+          <Button 
+            appearance="link" 
+            onClick={fetchRequests}
+            style={{ marginTop: '8px', padding: '0' }}
+          >
+            Try again
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   // Create table data
   const createTableData = () => {
@@ -254,62 +268,6 @@ const PortalFooter: React.FC = () => {
     ],
   };
 
-  // Debug information component
-  const DebugInfo = () => {
-    if (!debugInfo) return null;
-    
-    return (
-      <div style={{ 
-        fontSize: '12px', 
-        color: '#6b778c', 
-        marginBottom: '10px',
-        padding: '8px',
-        backgroundColor: '#f4f5f7',
-        borderRadius: '3px',
-        border: '1px solid #dfe1e6'
-      }}>
-        <strong>Debug Info:</strong> Project: {debugInfo.projectKey} | 
-        Source: {debugInfo.source} | 
-        Confidence: {debugInfo.confidence} | 
-        Base URL: {debugInfo.baseUrl}
-      </div>
-    );
-  };
-
-  if (loading) {
-    return (
-      <div style={{ padding: '20px', textAlign: 'center' }}>
-        <DebugInfo />
-        <Spinner size="medium" />
-        <p style={{ marginTop: '10px', color: '#6b778c' }}>Loading recent requests...</p>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div style={{ padding: '20px', textAlign: 'center' }}>
-        <DebugInfo />
-        <div style={{ color: '#de350b', marginBottom: '10px' }}>
-          <strong>Error:</strong> {error}
-        </div>
-        <Button 
-          appearance="primary" 
-          onClick={fetchWMPRRequests}
-          style={{ marginRight: '10px' }}
-        >
-          Retry
-        </Button>
-        <Button 
-          appearance="subtle" 
-          onClick={() => setError(null)}
-        >
-          Dismiss
-        </Button>
-      </div>
-    );
-  }
-
   return (
     <div style={{ padding: '20px' }}>
       <DebugInfo />
@@ -320,7 +278,7 @@ const PortalFooter: React.FC = () => {
         </h3>
         {requests.length === 0 && (
           <p style={{ color: '#6b778c', fontStyle: 'italic' }}>
-            No recent requests found for project: {projectKey}
+            No recent requests found. Make sure a JQL query is configured in the settings.
           </p>
         )}
       </div>
@@ -335,23 +293,6 @@ const PortalFooter: React.FC = () => {
           defaultSortKey="created"
           defaultSortOrder="DESC"
         />
-      )}
-
-      {buttonConfigs.length > 0 && (
-        <div style={{ marginTop: '20px', paddingTop: '20px', borderTop: '1px solid #dfe1e6' }}>
-          <h4 style={{ margin: '0 0 10px 0', color: '#172b4d' }}>Quick Actions</h4>
-          <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-            {buttonConfigs.map((button, index) => (
-              <Button
-                key={index}
-                appearance="primary"
-                onClick={() => window.open(button.url, '_blank')}
-              >
-                {button.label}
-              </Button>
-            ))}
-          </div>
-        </div>
       )}
     </div>
   );

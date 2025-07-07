@@ -127,4 +127,22 @@ if (typeof window !== 'undefined') {
     window.addEventListener('load', () => {
         setTimeout(mountWMPRPortalFooter, 500);
     });
+}
+
+export function init(containerId: string) {
+    const container = document.getElementById(containerId);
+    if (!container) {
+        console.error(`Container element with id '${containerId}' not found`);
+        return;
+    }
+
+    ReactDOM.render(
+        <PortalFooter />,
+        container
+    );
+}
+
+// For backwards compatibility
+export function mount() {
+    init('wmpr-portal-footer-container');
 } 

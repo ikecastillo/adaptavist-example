@@ -1,109 +1,90 @@
 ##
 ## WMPR Portal Footer Template - Service Desk Portal
 ##
-#set($webResourceManager = $action.webResourceManager)
-$webResourceManager.requireResource("com.scriptrunnerhq.vendors-api.backend:wmpr-portal-footer-resources")
-$webResourceManager.requireResource("com.atlassian.auiplugin:ajs")
+#* @vtlvariable name="webResourceManager" type="com.atlassian.plugin.webresource.WebResourceManager" *#
 
-<div id="wmpr-portal-footer-section" class="wmpr-portal-footer-section">
-    <div class="wmpr-loading-placeholder" style="padding: 20px; text-align: center; color: #5e6c84;">
-        <div style="width: 30px; height: 30px; border: 3px solid #f3f3f3; border-top: 3px solid #0052cc; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 10px;"></div>
-        <p style="margin: 0; font-size: 14px;">Loading WMPR requests...</p>
+<div id="wmpr-portal-footer-container">
+    <!-- Loading state while React component initializes -->
+    <div style="text-align: center; padding: 40px;">
+        <aui-spinner size="medium"></aui-spinner>
+        <p>Loading requests...</p>
     </div>
 </div>
 
-<style>
-    @keyframes spin {
-        0% { transform: rotate(0deg); }
-        100% { transform: rotate(360deg); }
-    }
-    
-    .wmpr-portal-footer-section {
-        margin: 10px 0;
-        min-height: 50px;
-        border: 1px solid #dfe1e6;
-        border-radius: 3px;
-        background: #fff;
-    }
-    
-    .sd-portal-footer .wmpr-portal-footer-section,
-    .servicedesk-portal-footer .wmpr-portal-footer-section {
-        margin: 20px 0;
-        max-width: 100%;
-    }
-</style>
+<script>
+    require(['wmprPortalFooter'], function(wmprPortalFooter) {
+        wmprPortalFooter.init('wmpr-portal-footer-container');
+    });
+</script>
 
-<script type="text/javascript">
-    (function() {
-        // Set up proper context path - use multiple methods to get it
-        var contextPath = '';
-        
-        #if($req.contextPath)
-            contextPath = '$req.contextPath';
-        #end
-        
-        // Fallback methods
-        if (!contextPath && typeof AJS !== 'undefined' && AJS.contextPath) {
-            contextPath = AJS.contextPath();
-        }
-        
-        if (!contextPath && window.location.pathname) {
-            var pathParts = window.location.pathname.split('/');
-            if (pathParts.length > 1 && pathParts[1]) {
-                contextPath = '/' + pathParts[1];
-            }
-        }
-        
-        // Set global context path
-        window.contextPath = contextPath || '';
-        
-        // Ensure AJS is available
-        if (typeof AJS === 'undefined') {
-            window.AJS = { 
-                contextPath: function() { 
-                    return window.contextPath; 
-                } 
-            };
-        }
-        
-        console.log('WMPR Portal Footer loaded - Context path:', window.contextPath);
-        
-        // Enhanced component initialization
-        function initWMPRFooter() {
-            console.log('Initializing WMPR footer component...');
-            
-            var footerSection = document.getElementById('wmpr-portal-footer-section');
-            if (!footerSection) {
-                console.log('Footer section not found, retrying...');
-                setTimeout(initWMPRFooter, 1000);
-                return;
-            }
-            
-            if (typeof window.WMPRPortalFooter !== 'undefined' && window.WMPRPortalFooter.mount) {
-                console.log('Mounting WMPR Portal Footer component');
-                window.WMPRPortalFooter.mount();
-            } else {
-                console.log('WMPRPortalFooter not ready, retrying...');
-                setTimeout(initWMPRFooter, 1000);
-            }
-        }
-        
-        // Initialize
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', initWMPRFooter);
-        } else {
-            setTimeout(initWMPRFooter, 100);
-        }
-        
-        // AJS ready
-        if (typeof AJS !== 'undefined' && AJS.toInit) {
-            AJS.toInit(initWMPRFooter);
-        }
-        
-        // Additional load events
-        window.addEventListener('load', function() {
-            setTimeout(initWMPRFooter, 500);
-        });
-        
-    })();
-</script> 
+<style>
+    #wmpr-portal-footer-container {
+        margin: 20px 0;
+        background: #ffffff;
+        border-radius: 8px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+
+    #wmpr-portal-footer-container a {
+        color: #0052cc;
+        text-decoration: none;
+    }
+
+    #wmpr-portal-footer-container a:hover {
+        text-decoration: underline;
+    }
+
+    #wmpr-portal-footer-container .aui-button {
+        margin-right: 8px;
+    }
+
+    #wmpr-portal-footer-container .aui-button:last-child {
+        margin-right: 0;
+    }
+
+    #wmpr-portal-footer-container table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    #wmpr-portal-footer-container th,
+    #wmpr-portal-footer-container td {
+        padding: 12px;
+        text-align: left;
+        border-bottom: 1px solid #dfe1e6;
+    }
+
+    #wmpr-portal-footer-container th {
+        background: #f4f5f7;
+        font-weight: 600;
+        color: #172b4d;
+    }
+
+    #wmpr-portal-footer-container tr:last-child td {
+        border-bottom: none;
+    }
+
+    #wmpr-portal-footer-container tr:hover td {
+        background: #f8f9fa;
+    }
+
+    #wmpr-portal-footer-container .empty-state {
+        padding: 40px;
+        text-align: center;
+        color: #6b778c;
+    }
+
+    #wmpr-portal-footer-container .error-state {
+        padding: 20px;
+        background: #ffebe6;
+        border: 1px solid #ff5630;
+        border-radius: 4px;
+        margin: 20px;
+        color: #bf2600;
+    }
+
+    #wmpr-portal-footer-container .button-group {
+        margin-bottom: 20px;
+        padding: 0 20px;
+    }
+</style> 

@@ -106,7 +106,7 @@ const PortalFooter: React.FC = () => {
   const fetchButtonConfigs = async () => {
     try {
       const baseUrl = getBaseUrl();
-      const url = `${baseUrl}/rest/portal-requests/1.0/settings/buttons`;
+      const url = `${baseUrl}/rest/portal-requests/1.0/settings`;
       
       logger.debug('Loading button configs from:', url);
       

@@ -2,15 +2,22 @@ import React, { useEffect, useState } from 'react';
 import Button, { ButtonGroup } from '@atlaskit/button';
 import Textfield from '@atlaskit/textfield';
 import Form, { Field, FormFooter, HelperMessage, ErrorMessage } from '@atlaskit/form';
+import Checkbox from '@atlaskit/checkbox';
 import SectionMessage from '@atlaskit/section-message';
 import Spinner from '@atlaskit/spinner';
+import DynamicTable from '@atlaskit/dynamic-table';
 import Tabs, { Tab, TabList, TabPanel } from '@atlaskit/tabs';
 import { type SelectedType } from '@atlaskit/tabs/types';
-import Select from '@atlaskit/select';
+import VisuallyHidden from '@atlaskit/visually-hidden';
 import { getBaseUrl } from './utils/projectKey';
+import { Toolbar } from "./toolbar";
+
+
 
 interface SettingsData {
+  projectKey: string;
   jql: string;
+  useCustomJql: boolean;
   defaultJql: string;
   button1Label: string;
   button1Url: string;
@@ -22,7 +29,6 @@ interface SettingsData {
   button4Url: string;
   button5Label: string;
   button5Url: string;
-  confluenceSpaces: string[];
 }
 
 interface ValidationResult {
@@ -31,22 +37,22 @@ interface ValidationResult {
   errors?: string;
 }
 
-interface ConfluencePage {
-  id: string;
-  title: string;
-  url: string;
-  space: string;
-}
-
-interface ConfluenceSpaceOption {
-  value: string;
+interface ButtonData {
+  buttonNumber: number;
   label: string;
+  url: string;
+  isConfigured: boolean;
 }
 
 const WMPRSettings: React.FC = () => {
+  // Get project key from window variable set by the servlet
+  const projectKey = (window as any).projectKey || 'global';
+
   const [settings, setSettings] = useState<SettingsData>({
+    projectKey: projectKey,
     jql: '',
-    defaultJql: 'project = HELP ORDER BY created DESC',
+    useCustomJql: false,
+    defaultJql: 'project = DEMO ORDER BY created DESC',
     button1Label: '',
     button1Url: '',
     button2Label: '',
@@ -56,109 +62,85 @@ const WMPRSettings: React.FC = () => {
     button4Label: '',
     button4Url: '',
     button5Label: '',
-    button5Url: '',
-    confluenceSpaces: []
+    button5Url: ''
   });
 
   const [loading, setLoading] = useState<boolean>(true);
   const [saving, setSaving] = useState<boolean>(false);
-  const [savingButtons, setSavingButtons] = useState<boolean>(false);
-  const [savingConfluence, setSavingConfluence] = useState<boolean>(false);
   const [validating, setValidating] = useState<boolean>(false);
   const [validationResult, setValidationResult] = useState<ValidationResult | null>(null);
   const [saveMessage, setSaveMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
   const [selectedTab, setSelectedTab] = useState<number>(0);
-  const [confluenceSpaces, setConfluenceSpaces] = useState<ConfluenceSpaceOption[]>([]);
-  const [loadingConfluenceSpaces, setLoadingConfluenceSpaces] = useState<boolean>(false);
+  const [statusMessage, setStatusMessage] = useState<string | null>(null);
 
   useEffect(() => {
     loadSettings();
-    loadConfluenceSpaces();
   }, []);
 
   const loadSettings = async () => {
     try {
-      const baseUrl = getBaseUrl();
-      const response = await fetch(`${baseUrl}/rest/portal-requests/1.0/settings`, {
+      setLoading(true);
+
+      // Include projectKey parameter in the API call - always send it for consistency
+      const url = new URL(`${getBaseUrl()}/rest/portal-requests/1.0/settings`);
+      url.searchParams.append('projectKey', projectKey);
+
+      console.log('Loading settings for projectKey:', projectKey);
+      console.log('GET URL:', url.toString());
+
+      const response = await fetch(url.toString(), {
         method: 'GET',
         headers: {
+          'Accept': 'application/json',
           'Content-Type': 'application/json',
         },
+        credentials: 'same-origin'
       });
 
-      if (response.ok) {
-        const data = await response.json();
-        setSettings({
-          jql: data.jql || '',
-          defaultJql: data.defaultJql || 'project = HELP ORDER BY created DESC',
-          button1Label: data.button1Label || '',
-          button1Url: data.button1Url || '',
-          button2Label: data.button2Label || '',
-          button2Url: data.button2Url || '',
-          button3Label: data.button3Label || '',
-          button3Url: data.button3Url || '',
-          button4Label: data.button4Label || '',
-          button4Url: data.button4Url || '',
-          button5Label: data.button5Label || '',
-          button5Url: data.button5Url || '',
-          confluenceSpaces: data.confluenceSpaces || []
-        });
-      } else {
-        console.error('Failed to load settings');
+      if (!response.ok) {
+        throw new Error(`Failed to load settings: ${response.status}`);
       }
+
+      const data = await response.json();
+      setSettings(data);
     } catch (error) {
       console.error('Error loading settings:', error);
+      setSaveMessage({ type: 'error', text: `Error loading settings: ${error instanceof Error ? error.message : 'Unknown error'}` });
     } finally {
       setLoading(false);
     }
   };
 
-  const loadConfluenceSpaces = async () => {
-    try {
-      setLoadingConfluenceSpaces(true);
-      const baseUrl = getBaseUrl();
-      const response = await fetch(`${baseUrl}/rest/portal-requests/1.0/settings/confluence-spaces`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setConfluenceSpaces(data.spaces || []);
-      } else {
-        console.error('Failed to load Confluence spaces');
-      }
-    } catch (error) {
-      console.error('Error loading Confluence spaces:', error);
-    } finally {
-      setLoadingConfluenceSpaces(false);
-    }
-  };
-
   const validateJql = async (jql: string) => {
-    if (!jql.trim()) {
+    if (!jql || jql.trim() === '') {
       setValidationResult({ valid: false, message: 'JQL cannot be empty' });
       return;
     }
 
     try {
       setValidating(true);
-      const baseUrl = getBaseUrl();
-      const response = await fetch(`${baseUrl}/rest/portal-requests/1.0/settings/validate-jql`, {
+      const response = await fetch(`${getBaseUrl()}/rest/portal-requests/1.0/settings/validate-jql`, {
         method: 'POST',
         headers: {
+          'Accept': 'application/json',
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ jql }),
+        credentials: 'same-origin',
+        body: JSON.stringify({ jql })
       });
+
+      if (!response.ok) {
+        throw new Error(`Validation failed: ${response.status}`);
+      }
 
       const result = await response.json();
       setValidationResult(result);
     } catch (error) {
       console.error('Error validating JQL:', error);
-      setValidationResult({ valid: false, message: 'Failed to validate JQL' });
+      setValidationResult({
+        valid: false,
+        message: `Validation error: ${error instanceof Error ? error.message : 'Unknown error'}`
+      });
     } finally {
       setValidating(false);
     }
@@ -169,240 +151,408 @@ const WMPRSettings: React.FC = () => {
       setSaving(true);
       setSaveMessage(null);
 
-      const baseUrl = getBaseUrl();
-      const response = await fetch(`${baseUrl}/rest/portal-requests/1.0/settings`, {
+      const payload = {
+        projectKey: projectKey, // Use the project key from window variable
+        jql: data.jql,
+        useCustomJql: data.useCustomJql,
+        button1Label: data.button1Label || '',
+        button1Url: data.button1Url || '',
+        button2Label: data.button2Label || '',
+        button2Url: data.button2Url || '',
+        button3Label: data.button3Label || '',
+        button3Url: data.button3Url || '',
+        button4Label: data.button4Label || '',
+        button4Url: data.button4Url || '',
+        button5Label: data.button5Label || '',
+        button5Url: data.button5Url || ''
+      };
+
+      console.log('Saving settings for projectKey:', projectKey);
+      console.log('POST payload:', JSON.stringify(payload, null, 2));
+
+      const response = await fetch(`${getBaseUrl()}/rest/portal-requests/1.0/settings`, {
         method: 'POST',
         headers: {
+          'Accept': 'application/json',
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          jql: data.jql,
-          confluenceSpaces: settings.confluenceSpaces
-        }),
+        credentials: 'same-origin',
+        body: JSON.stringify(payload)
       });
 
-      if (response.ok) {
-        const result = await response.json();
-        setSaveMessage({ type: 'success', text: result.message || 'Settings saved successfully' });
-        await loadSettings();
-      } else {
-        const error = await response.json();
-        setSaveMessage({ type: 'error', text: error.error || 'Failed to save settings' });
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Failed to save settings: ${response.status} - ${errorText}`);
       }
+
+      const result = await response.json();
+      setSaveMessage({ type: 'success', text: result.message || 'Settings saved successfully!' });
+
+      // Update local state
+      setSettings(prev => ({ ...prev, ...payload }));
     } catch (error) {
       console.error('Error saving settings:', error);
-      setSaveMessage({ type: 'error', text: 'Failed to save settings' });
+      setSaveMessage({
+        type: 'error',
+        text: `Error saving settings: ${error instanceof Error ? error.message : 'Unknown error'}`
+      });
     } finally {
       setSaving(false);
     }
   };
 
-  const handleButtonSubmit = async (data: any) => {
-    try {
-      setSavingButtons(true);
-      setSaveMessage(null);
-
-      const baseUrl = getBaseUrl();
-      const response = await fetch(`${baseUrl}/rest/portal-requests/1.0/settings/buttons`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(data),
-      });
-
-      if (response.ok) {
-        const result = await response.json();
-        setSaveMessage({ type: 'success', text: result.message || 'Button settings saved successfully' });
-        await loadSettings();
-      } else {
-        const error = await response.json();
-        setSaveMessage({ type: 'error', text: error.error || 'Failed to save button settings' });
-      }
-    } catch (error) {
-      console.error('Error saving button settings:', error);
-      setSaveMessage({ type: 'error', text: 'Failed to save button settings' });
-    } finally {
-      setSavingButtons(false);
-    }
-  };
-
-  const handleConfluenceSubmit = async (data: any) => {
-    try {
-      setSavingConfluence(true);
-      setSaveMessage(null);
-
-      const baseUrl = getBaseUrl();
-      const response = await fetch(`${baseUrl}/rest/portal-requests/1.0/settings`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          jql: settings.jql,
-          confluenceSpaces: data.confluenceSpaces
-        }),
-      });
-
-      if (response.ok) {
-        const result = await response.json();
-        setSaveMessage({ type: 'success', text: result.message || 'Confluence settings saved successfully' });
-        await loadSettings();
-      } else {
-        const error = await response.json();
-        setSaveMessage({ type: 'error', text: error.error || 'Failed to save Confluence settings' });
-      }
-    } catch (error) {
-      console.error('Error saving Confluence settings:', error);
-      setSaveMessage({ type: 'error', text: 'Failed to save Confluence settings' });
-    } finally {
-      setSavingConfluence(false);
-    }
-  };
-
   const handleTabChange = (index: SelectedType) => {
     setSelectedTab(index);
-    setSaveMessage(null);
+
+    // Set status messages for different tabs
+    switch(index) {
+      case 0:
+        setStatusMessage('JQL Configuration tab selected');
+        break;
+      case 1:
+        setStatusMessage('Portal Buttons tab selected');
+        break;
+      case 2:
+        setStatusMessage('Reports & Analytics tab selected');
+        break;
+      case 3:
+        setStatusMessage('Advanced Settings tab selected');
+        break;
+      case 4:
+        setStatusMessage('Help & Documentation tab selected');
+        break;
+      default:
+        setStatusMessage(null);
+    }
   };
+
+  // Prepare button data for the table
+  const getButtonsTableData = () => {
+    const buttons: ButtonData[] = [];
+    for (let i = 1; i <= 5; i++) {
+      const label = settings[`button${i}Label` as keyof SettingsData] as string;
+      const url = settings[`button${i}Url` as keyof SettingsData] as string;
+      buttons.push({
+        buttonNumber: i,
+        label: label || '',
+        url: url || '',
+        isConfigured: !!(label && url)
+      });
+    }
+    return buttons;
+  };
+
+  const buttonTableHead = {
+    cells: [
+      {
+        key: 'button',
+        content: 'Button #',
+        isSortable: false,
+        width: 15,
+      },
+      {
+        key: 'label',
+        content: 'Label',
+        isSortable: false,
+        width: 25,
+      },
+      {
+        key: 'url',
+        content: 'URL',
+        isSortable: false,
+        width: 40,
+      },
+      {
+        key: 'status',
+        content: 'Status',
+        isSortable: false,
+        width: 20,
+      },
+    ],
+  };
+
+  const buttonTableRows = getButtonsTableData().map((button, index) => ({
+    key: `button-row-${index}`,
+    cells: [
+      {
+        key: 'button',
+        content: (
+            <span style={{ fontWeight: 'bold', color: '#172b4d' }}>
+            {button.buttonNumber}
+          </span>
+        ),
+      },
+      {
+        key: 'label',
+        content: (
+            <span style={{
+              color: button.label ? '#172b4d' : '#8993a4',
+              fontStyle: button.label ? 'normal' : 'italic'
+            }}>
+            {button.label || 'Not set'}
+          </span>
+        ),
+      },
+      {
+        key: 'url',
+        content: (
+            <span style={{
+              color: button.url ? '#0052cc' : '#8993a4',
+              fontStyle: button.url ? 'normal' : 'italic',
+              fontSize: '12px'
+            }}>
+            {button.url ? (
+                <a href={button.url} target="_blank" rel="noopener noreferrer">
+                  {button.url.length > 50 ? `${button.url.substring(0, 50)}...` : button.url}
+                </a>
+            ) : 'Not set'}
+          </span>
+        ),
+      },
+      {
+        key: 'status',
+        content: (
+            <span style={{
+              display: 'inline-block',
+              padding: '2px 8px',
+              borderRadius: '3px',
+              fontSize: '11px',
+              fontWeight: 'bold',
+              backgroundColor: button.isConfigured ? '#e3fcef' : '#ffebe6',
+              color: button.isConfigured ? '#006644' : '#bf2600',
+              border: `1px solid ${button.isConfigured ? '#79e2a0' : '#ffbdad'}`
+            }}>
+            {button.isConfigured ? 'Configured' : 'Not Set'}
+          </span>
+        ),
+      },
+    ],
+  }));
 
   if (loading) {
     return (
-        <div style={{ padding: '40px', textAlign: 'center' }}>
+        <div style={{
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '60px 40px',
+          borderRadius: '8px',
+          margin: '20px'
+        }}>
           <Spinner size="large" />
-          <p style={{ marginTop: '16px', color: '#6b778c' }}>Loading settings...</p>
+          <p style={{
+            marginTop: '16px',
+            color: '#5e6c84',
+            fontSize: '16px',
+            fontWeight: '500'
+          }}>
+            Loading WMPR Settings...
+          </p>
+          <p style={{
+            margin: '8px 0 0 0',
+            color: '#8993a4',
+            fontSize: '14px'
+          }}>
+            Fetching configuration data
+          </p>
         </div>
     );
   }
 
   const containerStyle: React.CSSProperties = {
+    maxWidth: '1200px',
     margin: '0 auto',
-    padding: '24px',
-    fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif'
+    padding: '0',
+    fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen", "Ubuntu", "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif'
   };
 
   const headerStyle: React.CSSProperties = {
-    marginBottom: '24px',
+    padding: '32px 40px',
+    borderRadius: '8px 8px 0 0',
+    marginBottom: '0'
   };
 
   const contentStyle: React.CSSProperties = {
-    display: 'grid',
-    gridTemplateColumns: '1fr 450px',
-    gap: '24px',
-    alignItems: 'start'
-  };
-
-  const mainContentStyle: React.CSSProperties = {
+    background: '#fff',
+    borderRadius: '0 0 8px 8px',
+    boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
     overflow: 'hidden'
   };
 
-  const sidebarStyle: React.CSSProperties = {
+  const sectionStyle: React.CSSProperties = {
+    marginBottom: '32px',
+    padding: '32px',
     background: '#f8f9fa',
-    border: '1px solid #dfe1e6',
-    borderRadius: '8px',
-    padding: '20px',
-    position: 'sticky',
-    top: '24px'
+    border: '1px solid #e1e5e9',
+    borderRadius: '8px'
   };
 
-  const getConfiguredButtonsCount = () => {
-    let count = 0;
-    for (let i = 1; i <= 5; i++) {
-      const label = settings[`button${i}Label` as keyof SettingsData] as string;
-      const url = settings[`button${i}Url` as keyof SettingsData] as string;
-      if (label && url) count++;
-    }
-    return count;
+  const sectionTitleStyle: React.CSSProperties = {
+    margin: '0 0 16px 0',
+    color: '#172b4d',
+    fontSize: '18px',
+    fontWeight: '600',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px'
+  };
+
+  const tabPanelStyle: React.CSSProperties = {
+    padding: '32px',
+    minHeight: '400px'
   };
 
   return (
+      <div>
+        <Toolbar />
       <div style={containerStyle}>
+        {/* Header */}
         <div style={headerStyle}>
-          <h1 style={{ margin: '0 0 8px 0', fontSize: '28px', fontWeight: '600', color: '#172b4d' }}>
+          <h1 style={{
+            margin: '0 0 8px 0',
+            fontSize: '28px',
+            fontWeight: '600'
+          }}>
             WMPR Requests Settings
           </h1>
-          <p style={{ margin: '0', fontSize: '16px', color: '#6b778c', lineHeight: '1.5' }}>
-            Configure JQL queries, portal buttons, and Confluence knowledge bases for WMPR request display.
+          <p style={{
+            margin: '0',
+            fontSize: '16px',
+            color: 'rgba(255, 255, 255, 0.9)',
+            lineHeight: '1.5'
+          }}>
+            Configure JQL queries and service desk portal buttons for WMPR request display.
+            Customize how your team accesses and views work management process requests.
           </p>
         </div>
 
-        {saveMessage && (
-            <div style={{ marginBottom: '16px' }}>
-              <SectionMessage appearance={saveMessage.type}>
-                <p>{saveMessage.text}</p>
-              </SectionMessage>
-            </div>
-        )}
-
+        {/* Content with Atlaskit Tabs */}
         <div style={contentStyle}>
-          <div style={mainContentStyle}>
-            <Tabs onChange={handleTabChange} selected={selectedTab} id="portal-settings-tabs">
-              <TabList>
-                <Tab>JQL Configuration</Tab>
-                <Tab>Portal Buttons</Tab>
-                <Tab>cAIke Integration</Tab>
-              </TabList>
+          {statusMessage && (
+              <VisuallyHidden role="status">{statusMessage}</VisuallyHidden>
+          )}
 
-              {/* JQL Configuration Tab */}
-              <TabPanel>
-                <div style={{ padding: '12px', paddingLeft: '0px' }}>
-                  <h2 style={{ margin: '0 0 16px 0', fontSize: '20px', fontWeight: '600', color: '#172b4d' }}>
+          {saveMessage && (
+              <div style={{ padding: '20px 32px 0' }}>
+                <SectionMessage appearance={saveMessage.type === 'success' ? 'success' : 'error'}>
+                  <p>{saveMessage.text}</p>
+                </SectionMessage>
+              </div>
+          )}
+
+          <Tabs onChange={handleTabChange} selected={selectedTab} id="wmpr-settings-tabs">
+            <TabList>
+              <Tab>JQL Configuration</Tab>
+              <Tab>Portal Buttons</Tab>
+              <Tab>Reports & Analytics</Tab>
+              <Tab>Advanced Settings</Tab>
+              <Tab>Help & Documentation</Tab>
+            </TabList>
+
+            {/* JQL Configuration Tab */}
+            <TabPanel>
+              <div style={tabPanelStyle}>
+                <div style={sectionStyle}>
+                  <h2 style={sectionTitleStyle}>
                     JQL Query Configuration
                   </h2>
 
                   <SectionMessage appearance="information">
                     <p>
-                      Configure the JQL query used to display requests in the customer portal.
-                      The default query shows recent HELP project requests.
+                      Define a custom JQL query to control which WMPR requests appear in the Service Desk portal footer.
+                      Leave "Use Custom JQL" unchecked to use the default query.
                     </p>
                   </SectionMessage>
 
                   <Form onSubmit={handleSubmit}>
                     {({ formProps }) => (
                         <form {...formProps}>
-                          <Field
-                              name="jql"
-                              defaultValue={settings.jql || settings.defaultJql}
-                              label="JQL Query"
-                              isRequired
-                          >
-                            {({ fieldProps, error }) => (
-                                <div>
-                                  <Textfield
-                                      {...fieldProps}
-                                      placeholder="Enter JQL query (e.g., project = HELP ORDER BY created DESC)"
-                                      onChange={(e) => {
-                                        const value = (e.target as HTMLInputElement).value;
-                                        fieldProps.onChange(e);
-                                        if (value.trim()) {
-                                          validateJql(value);
-                                        } else {
-                                          setValidationResult(null);
-                                        }
-                                      }}
+                          <div style={{ marginTop: '24px' }}>
+                            <Field
+                                name="useCustomJql"
+                                defaultValue={settings.useCustomJql}
+                            >
+                              {({ fieldProps }) => (
+                                  <Checkbox
+                                      name={fieldProps.name}
+                                      isChecked={fieldProps.value}
+                                      onChange={(event) => fieldProps.onChange(event.target.checked)}
+                                      label="Use Custom JQL Query"
                                   />
-                                  {error && <ErrorMessage>{error}</ErrorMessage>}
-                                  {validationResult && (
-                                      <div style={{ marginTop: '8px' }}>
-                                        {validationResult.valid ? (
-                                            <HelperMessage>
-                                              ✓ {validationResult.message || 'JQL is valid'}
-                                            </HelperMessage>
-                                        ) : (
-                                            <ErrorMessage>
-                                              ✗ {validationResult.message || validationResult.errors || 'Invalid JQL'}
-                                            </ErrorMessage>
-                                        )}
-                                      </div>
-                                  )}
-                                  {validating && (
-                                      <div style={{ marginTop: '8px' }}>
-                                        <Spinner size="small" />
-                                        <span style={{ marginLeft: '8px', color: '#6b778c' }}>Validating JQL...</span>
-                                      </div>
-                                  )}
-                                </div>
-                            )}
-                          </Field>
+                              )}
+                            </Field>
+
+                            <Field
+                                name="jql"
+                                defaultValue={settings.jql}
+                                validate={(value) => {
+                                  if (!value || value.trim() === '') {
+                                    return 'JQL is required when using custom JQL';
+                                  }
+                                  return undefined;
+                                }}
+                            >
+                              {({ fieldProps, error }) => (
+                                  <div style={{ marginTop: '20px' }}>
+                                    <label style={{
+                                      display: 'block',
+                                      marginBottom: '8px',
+                                      fontWeight: '600',
+                                      color: '#172b4d'
+                                    }}>
+                                      Custom JQL Query
+                                    </label>
+                                    <Textfield
+                                        {...fieldProps}
+                                        placeholder={settings.defaultJql}
+                                        onBlur={() => {
+                                          if (fieldProps.value && fieldProps.value.trim() !== '') {
+                                            validateJql(fieldProps.value);
+                                          } else {
+                                            setValidationResult(null);
+                                          }
+                                        }}
+                                    />
+                                    {error && <ErrorMessage>{error}</ErrorMessage>}
+
+                                    {validating && (
+                                        <div style={{
+                                          marginTop: '8px',
+                                          display: 'flex',
+                                          alignItems: 'center',
+                                          color: '#5e6c84'
+                                        }}>
+                                          <Spinner size="small" />
+                                          <span style={{ marginLeft: '8px' }}>Validating JQL...</span>
+                                        </div>
+                                    )}
+
+                                    {validationResult && !validating && (
+                                        <div style={{ marginTop: '8px' }}>
+                                          {validationResult.valid ? (
+                                              <HelperMessage>✅ JQL is valid</HelperMessage>
+                                          ) : (
+                                              <ErrorMessage>
+                                                ❌ {validationResult.message || validationResult.errors}
+                                              </ErrorMessage>
+                                          )}
+                                        </div>
+                                    )}
+
+                                    <HelperMessage>
+                                      Default JQL: <code style={{
+                                      background: '#f4f5f7',
+                                      padding: '2px 4px',
+                                      borderRadius: '3px'
+                                    }}>
+                                      {settings.defaultJql}
+                                    </code>
+                                    </HelperMessage>
+                                  </div>
+                              )}
+                            </Field>
+                          </div>
 
                           <FormFooter>
                             <ButtonGroup>
@@ -425,60 +575,141 @@ const WMPRSettings: React.FC = () => {
                     )}
                   </Form>
                 </div>
-              </TabPanel>
+              </div>
+            </TabPanel>
 
-              {/* Portal Buttons Tab */}
-              <TabPanel>
-                <div style={{ padding: '12px', paddingLeft: '0px' }}>
-                  <h2 style={{ margin: '0 0 16px 0', fontSize: '20px', fontWeight: '600', color: '#172b4d' }}>
-                    Portal Buttons Configuration
+            {/* Portal Buttons Tab */}
+            <TabPanel>
+              <div style={tabPanelStyle}>
+                <div style={sectionStyle}>
+                  <h2 style={sectionTitleStyle}>
+                    Service Desk Portal Buttons
                   </h2>
 
                   <SectionMessage appearance="information">
                     <p>
-                      Configure up to 5 action buttons that will appear above the requests table in the customer portal.
+                      Configure up to 5 action buttons that will appear above the WMPR requests table in the service desk portal.
                       Only buttons with both label and URL configured will be displayed.
                     </p>
                   </SectionMessage>
 
-                  <Form onSubmit={handleButtonSubmit}>
+                  {/* Current Buttons Status Table */}
+                  <div style={{ marginTop: '24px', marginBottom: '32px' }}>
+                    <h3 style={{
+                      margin: '0 0 16px 0',
+                      fontSize: '16px',
+                      fontWeight: '600',
+                      color: '#172b4d'
+                    }}>
+                      Current Configuration
+                    </h3>
+                    <DynamicTable
+                        head={buttonTableHead}
+                        rows={buttonTableRows}
+                        defaultSortKey="button"
+                        defaultSortOrder="ASC"
+                        emptyView={<span>No buttons configured</span>}
+                    />
+                  </div>
+
+                  {/* Button Configuration Forms */}
+                  <Form onSubmit={handleSubmit}>
                     {({ formProps }) => (
                         <form {...formProps}>
-                          <div style={{ display: 'grid', gap: '20px', marginTop: '20px' }}>
+                          <h3 style={{
+                            margin: '0 0 20px 0',
+                            fontSize: '16px',
+                            fontWeight: '600',
+                            color: '#172b4d'
+                          }}>
+                            Configure Buttons
+                          </h3>
+
+                          <div style={{
+                            display: 'grid',
+                            gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))',
+                            gap: '20px'
+                          }}>
                             {[1, 2, 3, 4, 5].map((num) => (
                                 <div key={num} style={{
                                   padding: '20px',
                                   border: '1px solid #dfe1e6',
-                                  borderRadius: '6px',
-                                  backgroundColor: '#fafbfc'
+                                  borderRadius: '8px',
+                                  backgroundColor: '#fff'
                                 }}>
-                                  <h3 style={{ margin: '0 0 16px 0', fontSize: '16px', fontWeight: '600', color: '#172b4d' }}>
+                                  <h4 style={{
+                                    margin: '0 0 16px 0',
+                                    fontSize: '14px',
+                                    color: '#172b4d',
+                                    fontWeight: '600',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '8px'
+                                  }}>
+                              <span style={{
+                                display: 'inline-block',
+                                width: '20px',
+                                height: '20px',
+                                borderRadius: '50%',
+                                background: '#0052cc',
+                                color: 'white',
+                                fontSize: '12px',
+                                lineHeight: '20px',
+                                textAlign: 'center',
+                                fontWeight: 'bold'
+                              }}>
+                                {num}
+                              </span>
                                     Button {num}
-                                  </h3>
-                                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-                                    <Field
-                                        name={`button${num}Label`}
-                                        defaultValue={settings[`button${num}Label` as keyof SettingsData] as string}
-                                    >
-                                      {({ fieldProps }) => (
+                                  </h4>
+
+                                  <Field
+                                      name={`button${num}Label`}
+                                      defaultValue={settings[`button${num}Label` as keyof SettingsData] as string}
+                                  >
+                                    {({ fieldProps }) => (
+                                        <div style={{ marginBottom: '16px' }}>
+                                          <label style={{
+                                            display: 'block',
+                                            marginBottom: '6px',
+                                            fontSize: '12px',
+                                            fontWeight: '600',
+                                            color: '#5e6c84',
+                                            textTransform: 'uppercase'
+                                          }}>
+                                            Button Label
+                                          </label>
                                           <Textfield
                                               {...fieldProps}
-                                              placeholder="Button Label"
+                                              placeholder={`e.g., "Create Request"`}
                                           />
-                                      )}
-                                    </Field>
-                                    <Field
-                                        name={`button${num}Url`}
-                                        defaultValue={settings[`button${num}Url` as keyof SettingsData] as string}
-                                    >
-                                      {({ fieldProps }) => (
+                                        </div>
+                                    )}
+                                  </Field>
+
+                                  <Field
+                                      name={`button${num}Url`}
+                                      defaultValue={settings[`button${num}Url` as keyof SettingsData] as string}
+                                  >
+                                    {({ fieldProps }) => (
+                                        <div>
+                                          <label style={{
+                                            display: 'block',
+                                            marginBottom: '6px',
+                                            fontSize: '12px',
+                                            fontWeight: '600',
+                                            color: '#5e6c84',
+                                            textTransform: 'uppercase'
+                                          }}>
+                                            Button URL
+                                          </label>
                                           <Textfield
                                               {...fieldProps}
-                                              placeholder="Button URL"
+                                              placeholder="https://example.com/create-request"
                                           />
-                                      )}
-                                    </Field>
-                                  </div>
+                                        </div>
+                                    )}
+                                  </Field>
                                 </div>
                             ))}
                           </div>
@@ -488,13 +719,13 @@ const WMPRSettings: React.FC = () => {
                               <Button
                                   type="submit"
                                   appearance="primary"
-                                  isDisabled={savingButtons}
+                                  isDisabled={saving}
                               >
-                                {savingButtons ? 'Saving...' : 'Save Button Settings'}
+                                {saving ? 'Saving...' : 'Save Button Settings'}
                               </Button>
                               <Button
                                   onClick={loadSettings}
-                                  isDisabled={savingButtons}
+                                  isDisabled={saving}
                               >
                                 Reset
                               </Button>
@@ -504,174 +735,218 @@ const WMPRSettings: React.FC = () => {
                     )}
                   </Form>
                 </div>
-              </TabPanel>
+              </div>
+            </TabPanel>
 
-              {/* cAIke Integration Tab */}
-              <TabPanel>
-                <div style={{ padding: '12px', paddingLeft: '0px' }}>
-                  <h2 style={{ margin: '0 0 16px 0', fontSize: '20px', fontWeight: '600', color: '#172b4d' }}>
-                    cAIke Integration
+            {/* Reports & Analytics Tab (Dummy) */}
+            <TabPanel>
+              <div style={tabPanelStyle}>
+                <div style={sectionStyle}>
+                  <h2 style={sectionTitleStyle}>
+                    Reports & Analytics
                   </h2>
 
                   <SectionMessage appearance="information">
                     <p>
-                      Configure AI-powered assistance for customers. Select Confluence knowledge bases to provide intelligent responses
-                      to customer questions and return relevant documentation.
+                      View detailed analytics and reports on WMPR request usage, performance metrics, and user engagement statistics.
                     </p>
                   </SectionMessage>
 
-                  <div style={{ marginTop: '20px' }}>
-                    <h3 style={{ margin: '0 0 12px 0', fontSize: '16px', fontWeight: '600', color: '#172b4d' }}>
-                      Confluence Space Keys
-                    </h3>
-                    <p style={{ margin: '0 0 16px 0', color: '#6b778c', fontSize: '14px' }}>
-                      Select the Confluence spaces that will be used as knowledge bases for AI-powered customer assistance.
-                      Only spaces you have access to will be displayed.
+                  <div style={{ marginTop: '24px' }}>
+                    <h3 style={{ color: '#172b4d', marginBottom: '16px' }}>Coming Soon</h3>
+                    <p style={{ color: '#5e6c84', lineHeight: '1.6' }}>
+                      This section will include comprehensive analytics for:
                     </p>
-
-                    {loadingConfluenceSpaces ? (
-                        <div style={{ textAlign: 'center', padding: '40px' }}>
-                          <Spinner size="medium" />
-                          <p style={{ marginTop: '12px', color: '#6b778c' }}>
-                            Loading available Confluence spaces...
-                          </p>
-                        </div>
-                    ) : (
-                        <Form onSubmit={handleConfluenceSubmit}>
-                            {({ formProps }) => (
-                                <form {...formProps}>
-                                  <Field
-                                      name="confluenceSpaces"
-                                      label="Select Confluence Spaces"
-                                      defaultValue={settings.confluenceSpaces}
-                                  >
-                                    {({ fieldProps, error }) => (
-                                        <div>
-                                          <Select
-                                              inputId="confluence-spaces-select"
-                                              testId="confluence-spaces-select"
-                                              options={confluenceSpaces}
-                                              placeholder="Choose Confluence spaces"
-                                              isMulti
-                                              isSearchable
-                                              isClearable
-                                              value={Array.isArray(fieldProps.value) ? fieldProps.value.map((space: string) => confluenceSpaces.find(opt => opt.value === space) || { value: space, label: space }) : []}
-                                              onChange={(newValue) => {
-                                                const selectedValues = Array.isArray(newValue) ? newValue.map(item => item.value) : [];
-                                                fieldProps.onChange(selectedValues);
-                                              }}
-                                          />
-                                          {error && <ErrorMessage>{error}</ErrorMessage>}
-                                          <HelperMessage>
-                                            Selected spaces will be used as knowledge bases for AI responses in the customer portal.
-                                          </HelperMessage>
-                                        </div>
-                                    )}
-                                  </Field>
-
-                                  <FormFooter>
-                                    <ButtonGroup>
-                                      <Button
-                                          type="submit"
-                                          appearance="primary"
-                                          isDisabled={savingConfluence}
-                                      >
-                                        {savingConfluence ? 'Saving...' : 'Save Confluence Settings'}
-                                      </Button>
-                                      <Button
-                                          onClick={loadSettings}
-                                          isDisabled={savingConfluence}
-                                      >
-                                        Reset
-                                      </Button>
-                                    </ButtonGroup>
-                                  </FormFooter>
-                                </form>
-                            )}
-                        </Form>
-                    )}
+                    <ul style={{ color: '#5e6c84', lineHeight: '1.6', marginLeft: '20px' }}>
+                      <li>Request volume and trends over time</li>
+                      <li>Most frequently accessed request types</li>
+                      <li>Button click analytics and conversion rates</li>
+                      <li>User engagement patterns</li>
+                      <li>Performance metrics and load times</li>
+                    </ul>
                   </div>
                 </div>
-              </TabPanel>
-            </Tabs>
-          </div>
+              </div>
+            </TabPanel>
 
-          {/* Configuration Summary Sidebar */}
-          <div style={sidebarStyle}>
-            <h3 style={{ margin: '0 0 16px 0', fontSize: '16px', fontWeight: '600', color: '#172b4d' }}>
-              Configuration Summary
+            {/* Advanced Settings Tab (Dummy) */}
+            <TabPanel>
+              <div style={tabPanelStyle}>
+                <div style={sectionStyle}>
+                  <h2 style={sectionTitleStyle}>
+                    Advanced Settings
+                  </h2>
+
+                  <SectionMessage appearance="information">
+                    <p>
+                      Configure advanced options for WMPR request handling, caching, permissions, and integration settings.
+                    </p>
+                  </SectionMessage>
+
+                  <div style={{ marginTop: '24px' }}>
+                    <h3 style={{ color: '#172b4d', marginBottom: '16px' }}>Future Configuration Options</h3>
+                    <p style={{ color: '#5e6c84', lineHeight: '1.6' }}>
+                      Advanced settings will include:
+                    </p>
+                    <ul style={{ color: '#5e6c84', lineHeight: '1.6', marginLeft: '20px' }}>
+                      <li>Cache timeout and refresh intervals</li>
+                      <li>Permission-based filtering and access control</li>
+                      <li>Custom field mappings and display options</li>
+                      <li>Integration with external systems</li>
+                      <li>Custom CSS styling options</li>
+                      <li>API rate limiting and throttling</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </TabPanel>
+
+            {/* Help & Documentation Tab (Dummy) */}
+            <TabPanel>
+              <div style={tabPanelStyle}>
+                <div style={sectionStyle}>
+                  <h2 style={sectionTitleStyle}>
+                    Help & Documentation
+                  </h2>
+
+                  <SectionMessage appearance="success">
+                    <p>
+                      Find answers to common questions, setup guides, and troubleshooting information for WMPR Request configuration.
+                    </p>
+                  </SectionMessage>
+
+                  <div style={{ marginTop: '24px' }}>
+                    <h3 style={{ color: '#172b4d', marginBottom: '16px' }}>Quick Start Guide</h3>
+                    <div style={{
+                      background: '#fff',
+                      padding: '20px',
+                      borderRadius: '6px',
+                      border: '1px solid #dfe1e6',
+                      marginBottom: '20px'
+                    }}>
+                      <h4 style={{ color: '#172b4d', marginBottom: '12px' }}>1. Configure JQL Query</h4>
+                      <p style={{ color: '#5e6c84', marginBottom: '0' }}>
+                        Set up a custom JQL query to filter which requests appear in your portal footer.
+                      </p>
+                    </div>
+
+                    <div style={{
+                      background: '#fff',
+                      padding: '20px',
+                      borderRadius: '6px',
+                      border: '1px solid #dfe1e6',
+                      marginBottom: '20px'
+                    }}>
+                      <h4 style={{ color: '#172b4d', marginBottom: '12px' }}>2. Set Up Portal Buttons</h4>
+                      <p style={{ color: '#5e6c84', marginBottom: '0' }}>
+                        Configure action buttons that will appear above your WMPR requests table for quick access to common actions.
+                      </p>
+                    </div>
+
+                    <div style={{
+                      background: '#fff',
+                      padding: '20px',
+                      borderRadius: '6px',
+                      border: '1px solid #dfe1e6'
+                    }}>
+                      <h4 style={{ color: '#172b4d', marginBottom: '12px' }}>3. Test Your Configuration</h4>
+                      <p style={{ color: '#5e6c84', marginBottom: '0' }}>
+                        Visit your Service Desk portal to see the WMPR requests section and verify your settings are working correctly.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </TabPanel>
+          </Tabs>
+
+          {/* Summary Section */}
+          <div style={{
+            margin: '40px 32px 32px',
+            padding: '24px',
+            backgroundColor: '#f4f5f7',
+            borderRadius: '8px',
+            border: '1px solid #e1e5e9'
+          }}>
+            <h3 style={{
+              margin: '0 0 16px 0',
+              fontSize: '16px',
+              fontWeight: '600',
+              color: '#172b4d'
+            }}>
+              Current Configuration Summary
             </h3>
 
-            <div style={{ marginBottom: '20px' }}>
-              <h4 style={{ margin: '0 0 8px 0', fontSize: '14px', fontWeight: '600', color: '#5e6c84' }}>
-                JQL Configuration
-              </h4>
-              <div style={{ fontSize: '12px', color: '#6b778c', marginBottom: '8px' }}>
-                <strong>Active Query:</strong>
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
+              gap: '24px'
+            }}>
+              <div>
+                <p style={{ margin: '8px 0', color: '#5e6c84' }}>
+                  <strong style={{ color: '#172b4d' }}>Project:</strong> {settings.projectKey}
+                </p>
+                <p style={{ margin: '8px 0', color: '#5e6c84' }}>
+                  <strong style={{ color: '#172b4d' }}>Custom JQL:</strong> {settings.useCustomJql ? 'Enabled' : 'Disabled'}
+                </p>
+                <p style={{ margin: '8px 0', color: '#5e6c84' }}>
+                  <strong style={{ color: '#172b4d' }}>Active Query:</strong>
+                </p>
+                <code style={{
+                  display: 'block',
+                  padding: '12px',
+                  backgroundColor: '#fff',
+                  border: '1px solid #dfe1e6',
+                  borderRadius: '4px',
+                  fontSize: '12px',
+                  marginTop: '6px',
+                  wordBreak: 'break-all'
+                }}>
+                  {settings.useCustomJql && settings.jql ? settings.jql : settings.defaultJql}
+                </code>
               </div>
-              <code style={{
-                display: 'block',
-                padding: '8px',
-                backgroundColor: '#ffffff',
-                border: '1px solid #dfe1e6',
-                borderRadius: '4px',
-                fontSize: '11px',
-                wordBreak: 'break-all',
-                lineHeight: '1.4'
-              }}>
-                {settings.jql || settings.defaultJql}
-              </code>
-            </div>
 
-            <div style={{ marginBottom: '20px' }}>
-              <h4 style={{ margin: '0 0 8px 0', fontSize: '14px', fontWeight: '600', color: '#5e6c84' }}>
-                Portal Buttons
-              </h4>
-              <div style={{ fontSize: '12px', color: '#6b778c', marginBottom: '8px' }}>
-                <strong>Configured:</strong> {getConfiguredButtonsCount()} of 5
-              </div>
-              {getConfiguredButtonsCount() > 0 && (
-                  <div style={{ display: 'grid', gap: '4px' }}>
-                    {[1, 2, 3, 4, 5].map((num) => {
-                      const label = settings[`button${num}Label` as keyof SettingsData] as string;
-                      const url = settings[`button${num}Url` as keyof SettingsData] as string;
-                      if (label && url) {
-                        return (
-                            <div key={num} style={{
-                              padding: '6px 8px',
-                              backgroundColor: '#ffffff',
-                              border: '1px solid #dfe1e6',
-                              borderRadius: '3px',
-                              fontSize: '11px'
-                            }}>
-                              <div style={{ fontWeight: '600', color: '#172b4d' }}>{label}</div>
-                              <div style={{ color: '#6b778c', wordBreak: 'break-all' }}>
-                                {url.length > 30 ? `${url.substring(0, 30)}...` : url}
-                              </div>
-                            </div>
-                        );
-                      }
-                      return null;
-                    })}
-                  </div>
-              )}
-            </div>
-
-            <div>
-              <h4 style={{ margin: '0 0 8px 0', fontSize: '14px', fontWeight: '600', color: '#5e6c84' }}>
-                cAIke Integration
-              </h4>
-              <div style={{ fontSize: '12px', color: '#6b778c' }}>
-                <strong>Status:</strong> {settings.confluenceSpaces.length > 0 ? 'Configured' : 'Not configured'}
-              </div>
-              <div style={{ fontSize: '12px', color: '#6b778c', marginTop: '4px' }}>
-                <strong>Knowledge Bases:</strong> {settings.confluenceSpaces.length > 0 ? settings.confluenceSpaces.join(', ') : 'None selected'}
+              <div>
+                <p style={{ margin: '8px 0 16px 0', color: '#172b4d', fontWeight: '600' }}>
+                  Configured Buttons: {getButtonsTableData().filter(b => b.isConfigured).length} of 5
+                </p>
+                {getButtonsTableData().map((button) => (
+                    <div key={button.buttonNumber} style={{
+                      margin: '6px 0',
+                      fontSize: '12px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px'
+                    }}>
+                  <span style={{
+                    display: 'inline-block',
+                    width: '16px',
+                    height: '16px',
+                    borderRadius: '50%',
+                    background: button.isConfigured ? '#36b37e' : '#dfe1e6',
+                    color: 'white',
+                    fontSize: '10px',
+                    lineHeight: '16px',
+                    textAlign: 'center',
+                    fontWeight: 'bold'
+                  }}>
+                    {button.buttonNumber}
+                  </span>
+                      <span style={{ color: button.isConfigured ? '#172b4d' : '#8993a4' }}>
+                    {button.isConfigured
+                        ? `"${button.label}" → ${button.url.substring(0, 30)}${button.url.length > 30 ? '...' : ''}`
+                        : 'Not configured'
+                    }
+                  </span>
+                    </div>
+                ))}
               </div>
             </div>
           </div>
         </div>
       </div>
+      </div>
   );
 };
 
-export default WMPRSettings;
+export default WMPRSettings; 

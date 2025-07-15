@@ -28,6 +28,7 @@ module.exports = (_, { mode }) => {
             ]
         },
         entry: {
+            'toolbar': './src/toolbar.tsx',
             'wmprPortalFooter': './src/wmpr-portal-footer-integration.tsx',
             'wmprSettings': './src/wmpr-settings-integration.tsx'
         },

@@ -1,0 +1,74 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Custom base styles for Jira integration */
+@layer base {
+  /* Ensure proper font rendering */
+  * {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  
+  /* Reset for Jira context */
+  .wmpr-toolbar-container * {
+    box-sizing: border-box;
+  }
+}
+
+/* Custom component styles */
+@layer components {
+  /* Toolbar specific styles */
+  .toolbar-button {
+    @apply h-8 w-8 flex items-center justify-center rounded-md transition-colors duration-200 hover:bg-primary/10 focus:outline-none;
+  }
+  
+  .toolbar-button.active {
+    @apply bg-primary/10;
+  }
+  
+  .toolbar-tooltip {
+    @apply absolute bottom-10 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white text-xs rounded-md px-2 py-1 shadow-lg text-nowrap font-medium;
+  }
+  
+  .toolbar-container {
+    @apply relative w-full min-h-[300px] flex items-center justify-center rounded-lg p-6;
+  }
+  
+  .toolbar-panel {
+    @apply absolute z-50 bg-secondary rounded-lg shadow-lg border border-primary/10 flex items-center gap-1 p-1;
+  }
+  
+  .toolbar-divider {
+    @apply w-px h-8 bg-gray-300;
+  }
+}
+
+/* Utility overrides for Jira context */
+@layer utilities {
+  /* Ensure colors work in Jira's context */
+  .text-jira-primary {
+    color: #0052CC !important;
+  }
+  
+  .bg-jira-primary {
+    background-color: #0052CC !important;
+  }
+  
+  .border-jira-primary {
+    border-color: #0052CC !important;
+  }
+  
+  /* High specificity utilities for Jira overrides */
+  .force-flex {
+    display: flex !important;
+  }
+  
+  .force-relative {
+    position: relative !important;
+  }
+  
+  .force-absolute {
+    position: absolute !important;
+  }
+} 

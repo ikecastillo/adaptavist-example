@@ -14,6 +14,7 @@ import {
     Strikethrough,
 } from "lucide-react";
 import React, { useEffect, useState } from 'react';
+import './styles/tailwind.css';
 
 const ToolbarButton = ({
                            label,

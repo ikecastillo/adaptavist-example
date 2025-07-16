@@ -23,7 +23,20 @@ module.exports = (_, { mode }) => {
                 },
                 {
                     test: /\.css$/,
-                    use: ['style-loader', 'css-loader']
+                    exclude: /node_modules/,
+                    use: [
+                        'style-loader',
+                        'css-loader',
+                        'postcss-loader'
+                    ]
+                },
+                {
+                    test: /\.css$/,
+                    include: /node_modules/,
+                    use: [
+                        'style-loader',
+                        'css-loader'
+                    ]
                 }
             ]
         },
